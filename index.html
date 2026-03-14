@@ -3,55 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CQB Bangi Tactical v1.0.0</title>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <title>CQB Bangi - Overdrive</title>
     <style>
-        body { margin: 0; background: #111; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; -webkit-user-select: none; }
-        canvas { display: block; background: #222; }
-        
-        #ui { position: absolute; top: 10px; left: 10px; color: #0f0; pointer-events: none; z-index: 100; font-size: 11px; text-shadow: 1px 1px #000; }
-        .controls-input { pointer-events: auto; background: rgba(0,0,0,0.7); color: #0f0; border: 1px solid #0f0; padding: 4px; margin-top: 4px; font-size: 10px; }
-
-        /* D-PAD MINECRAFT STYLE (FIXED) */
-        #mobile-controls {
-            position: absolute;
-            bottom: 20px;
-            width: 100%;
-            height: 160px;
-            pointer-events: none;
-            z-index: 1000;
-            display: block; /* Paksa muncul untuk testing, nanti diatur JS */
-        }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; }
+        canvas { display: block; }
+        #hud { position: absolute; top: 20px; left: 20px; color: #0f0; pointer-events: none; background: rgba(0,0,0,0.6); padding: 10px; border: 1px solid #0f0; border-radius: 5px; }
+        #mobile-controls { position: absolute; bottom: 20px; width: 100%; height: 160px; pointer-events: none; display: none; }
         .dpad { position: absolute; left: 20px; bottom: 10px; width: 140px; height: 140px; pointer-events: auto; }
-        .d-btn { 
-            position: absolute; width: 45px; height: 45px; 
-            background: rgba(255,255,255,0.15); 
-            border: 2px solid rgba(255,255,255,0.4); 
-            display: flex; align-items: center; justify-content: center; 
-            color: white; font-size: 20px; border-radius: 4px;
-        }
-        #up { left: 47px; top: 0; }
-        #down { left: 47px; bottom: 0; }
-        #left { left: 0; top: 47px; }
-        #right { right: 0; top: 47px; }
-        
-        .action-area { position: absolute; right: 25px; bottom: 25px; pointer-events: auto; }
-        .fire-btn { 
-            width: 75px; height: 75px; 
-            background: rgba(255,0,0,0.25); 
-            border: 3px solid rgba(255,255,255,0.5); 
-            border-radius: 50%; display: flex; align-items: center; 
-            justify-content: center; color: white; font-weight: bold; 
-        }
+        .d-btn { position: absolute; width: 45px; height: 45px; background: rgba(255,255,255,0.1); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; color: white; border-radius: 5px; }
+        #up { left: 47px; top: 0; } #down { left: 47px; bottom: 0; } #left { left: 0; top: 47px; } #right { right: 0; top: 47px; }
+        .fire-btn { position: absolute; right: 30px; bottom: 20px; width: 85px; height: 85px; background: rgba(255,0,0,0.4); border: 3px solid #fff; border-radius: 50%; pointer-events: auto; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; }
+        @media (pointer: coarse) { #mobile-controls { display: block; } }
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <b>CQB TACTICAL v1.0.0</b><br>
-        ID: <span id="my-id">...</span> | <span id="status">Solo</span><br>
-        <input type="text" id="peer-id-input" class="controls-input" placeholder="ID Teman">
-        <button onclick="connectToPeer()" class="controls-input">JOIN</button>
+    <div id="hud">
+        <b>NASA TACTICAL OPS</b><br>
+        HEALTH: <span id="hp">100</span> | SCORE: <span id="score">0</span>
     </div>
 
     <div id="mobile-controls">
@@ -61,9 +30,7 @@
             <div id="right" class="d-btn">▶</div>
             <div id="down" class="d-btn">▼</div>
         </div>
-        <div class="action-area">
-            <div id="fire-btn" class="fire-btn">FIRE</div>
-        </div>
+        <div id="fire-btn" class="fire-btn">FIRE</div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -71,66 +38,65 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            // Sembunyikan D-Pad jika layar sangat lebar (PC)
-            document.getElementById('mobile-controls').style.display = window.innerWidth > 1000 ? 'none' : 'block';
-        }
-        window.addEventListener('resize', resize);
-        resize();
+        const TILE = 64;
+        let score = 0;
 
-        // --- MAP DATA ---
-        const TILE = 60;
-        const world = [
-            [1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,1,0,0,0,3,1],
-            [1,0,3,0,2,0,0,0,0,1],
-            [1,0,0,0,1,1,2,1,0,1],
-            [1,1,2,1,1,0,0,1,0,1],
-            [1,0,0,0,0,0,0,2,0,1],
-            [1,1,1,1,1,1,1,1,1,1]
+        const map = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+            [1,0,3,0,2,0,0,3,3,0,0,3,0,0,1],
+            [1,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+            [1,1,2,1,1,1,1,2,1,1,1,1,2,1,1],
+            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,1,1,2,1,1,0,0,0,0,0,0],
+            [0,0,0,0,1,0,0,0,1,0,0,0,0,0,0],
+            [0,0,0,0,1,1,1,1,1,0,0,0,0,0,0]
         ];
 
-        const player = { x: 90, y: 90, angle: 0, speed: 3.5 };
-        const enemies = [{x: 400, y: 150, alive: true}, {x: 450, y: 320, alive: true}];
+        const player = { x: 96, y: 96, angle: 0, speed: 4, hp: 100, flash: 0 };
+        const enemies = [{x: 500, y: 150, hp: 100}, {x: 800, y: 100, hp: 100}, {x: 450, y: 450, hp: 100}];
         const bullets = [];
+        const particles = [];
         const keys = {};
         const moveState = { up: false, down: false, left: false, right: false };
 
-        // --- MULTIPLAYER ---
-        const peer = new Peer();
-        let conn;
-        peer.on('open', id => document.getElementById('my-id').innerText = id);
-        peer.on('connection', c => { conn = c; setupConn(); });
-        function connectToPeer() { conn = peer.connect(document.getElementById('peer-id-input').value); setupConn(); }
-        function setupConn() {
-            document.getElementById('status').innerText = "Connected";
-            conn.on('data', data => { if(data.type==='shoot') bullets.push(data.b); });
-        }
+        window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+        window.dispatchEvent(new Event('resize'));
 
-        // --- CONTROLS ---
+        // Input
         window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
-        window.addEventListener('mousemove', e => { player.angle = Math.atan2(e.clientY - player.y, e.clientX - player.x); });
+        window.addEventListener('mousemove', e => player.angle = Math.atan2(e.clientY - player.y, e.clientX - player.x));
         window.addEventListener('mousedown', () => { if(window.innerWidth > 1000) shoot(); });
 
         function bind(id, dir) {
-            const btn = document.getElementById(id);
-            const start = (e) => { e.preventDefault(); moveState[dir] = true; btn.style.background = "rgba(255,255,255,0.4)"; };
-            const end = (e) => { e.preventDefault(); moveState[dir] = false; btn.style.background = "rgba(255,255,255,0.15)"; };
-            btn.addEventListener('touchstart', start); btn.addEventListener('touchend', end);
-            btn.addEventListener('mousedown', start); btn.addEventListener('mouseup', end);
+            const el = document.getElementById(id);
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); moveState[dir] = true; });
+            el.addEventListener('touchend', (e) => { e.preventDefault(); moveState[dir] = false; });
         }
         bind('up','up'); bind('down','down'); bind('left','left'); bind('right','right');
-        document.getElementById('fire-btn').addEventListener('touchstart', (e)=>{ e.preventDefault(); shoot(); });
-        document.getElementById('fire-btn').addEventListener('mousedown', (e)=>{ shoot(); });
+        document.getElementById('fire-btn').addEventListener('touchstart', (e) => { e.preventDefault(); shoot(); });
 
-        function shoot() { bullets.push({ x: player.x, y: player.y, angle: player.angle, speed: 12 }); }
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 12; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    life: 1.0,
+                    color: color
+                });
+            }
+        }
+
+        function shoot() {
+            bullets.push({ x: player.x, y: player.y, angle: player.angle, speed: 18 });
+            player.flash = 5; // Muzzle flash frames
+        }
 
         function checkWall(x, y) {
-            const gx = Math.floor(x/TILE); const gy = Math.floor(y/TILE);
-            return world[gy] && (world[gy][gx] === 1 || world[gy][gx] === 3);
+            const gx = Math.floor(x / TILE); const gy = Math.floor(y / TILE);
+            return map[gy] && (map[gy][gx] === 1 || map[gy][gx] === 3);
         }
 
         function update() {
@@ -142,31 +108,81 @@
 
             if (!checkWall(player.x + dx, player.y)) player.x += dx;
             if (!checkWall(player.x, player.y + dy)) player.y += dy;
-            
-            if (dx !== 0 || dy !== 0) player.angle = Math.atan2(dy, dx);
+            if (player.flash > 0) player.flash--;
 
             bullets.forEach((b, i) => {
-                b.x += Math.cos(b.angle)*b.speed; b.y += Math.sin(b.angle)*b.speed;
-                if(checkWall(b.x, b.y)) bullets.splice(i,1);
+                b.x += Math.cos(b.angle) * b.speed;
+                b.y += Math.sin(b.angle) * b.speed;
+                if (checkWall(b.x, b.y)) bullets.splice(i, 1);
+                
+                enemies.forEach((en, ei) => {
+                    if (en.hp > 0 && Math.hypot(en.x - b.x, en.y - b.y) < 20) {
+                        en.hp -= 40;
+                        createExplosion(b.x, b.y, '#f00'); // Darah
+                        bullets.splice(i, 1);
+                        if (en.hp <= 0) {
+                            score += 100;
+                            createExplosion(en.x, en.y, '#ff0'); // Efek mati
+                        }
+                    }
+                });
             });
+
+            particles.forEach((p, i) => {
+                p.x += p.vx; p.y += p.vy; p.life -= 0.03;
+                if (p.life <= 0) particles.splice(i, 1);
+            });
+
+            document.getElementById('hp').innerText = player.hp;
+            document.getElementById('score').innerText = score;
         }
 
         function draw() {
-            ctx.fillStyle = '#222'; ctx.fillRect(0,0,canvas.width,canvas.height);
-            for(let r=0; r<world.length; r++) {
-                for(let c=0; c<world[r].length; c++) {
-                    if(world[r][c] === 1) ctx.fillStyle = '#444';
-                    else if(world[r][c] === 3) ctx.fillStyle = '#2c3e50';
+            ctx.fillStyle = '#111'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // World
+            for(let r=0; r<map.length; r++) {
+                for(let c=0; c<map[r].length; c++) {
+                    if (map[r][c] === 1) ctx.fillStyle = '#333';
+                    else if (map[r][c] === 2) ctx.fillStyle = '#5d4037';
+                    else if (map[r][c] === 3) ctx.fillStyle = '#1a237e';
                     else continue;
                     ctx.fillRect(c*TILE, r*TILE, TILE, TILE);
                 }
             }
-            // Draw Player
-            ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(player.angle);
-            ctx.fillStyle = '#3498db'; ctx.beginPath(); ctx.ellipse(0,0,12,15,0,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#000'; ctx.fillRect(10,-2,15,4); ctx.restore();
-            // Draw Bullets
-            ctx.fillStyle = 'yellow'; bullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, 2, 0, Math.PI*2); ctx.fill(); });
+
+            // Particles
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, 4, 4);
+                ctx.globalAlpha = 1;
+            });
+
+            // Player
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.angle);
+            if (player.flash > 0) { // Muzzle Flash
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.8)';
+                ctx.beginPath(); ctx.arc(35, 0, 10, 0, Math.PI*2); ctx.fill();
+            }
+            ctx.fillStyle = '#1976d2';
+            ctx.beginPath(); ctx.ellipse(0, 0, 15, 20, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#000'; ctx.fillRect(12, -3, 20, 6); // Weapon
+            ctx.restore();
+
+            // Enemies
+            enemies.forEach(en => {
+                if (en.hp > 0) {
+                    ctx.fillStyle = '#c62828';
+                    ctx.beginPath(); ctx.arc(en.x, en.y, 15, 0, Math.PI*2); ctx.fill();
+                }
+            });
+
+            // Bullets
+            ctx.fillStyle = '#ffeb3b';
+            bullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI*2); ctx.fill(); });
         }
 
         function loop() { update(); draw(); requestAnimationFrame(loop); }
