@@ -2,16 +2,19 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CQB Tactical 2D</title>
+    <title>CQB Tactical - Room Clear</title>
     <style>
-        body { margin: 0; background: #222; overflow: hidden; font-family: sans-serif; }
-        canvas { display: block; background: #333; cursor: crosshair; }
-        #ui { position: absolute; top: 10px; left: 10px; color: white; pointer-events: none; }
+        body { margin: 0; background: #1a1a1a; overflow: hidden; font-family: 'Courier New', Courier, monospace; }
+        canvas { display: block; background: #333; }
+        #hud { position: absolute; top: 20px; left: 20px; color: #00ff00; pointer-events: none; text-shadow: 2px 2px #000; }
     </style>
 </head>
 <body>
-    <div id="ui">WASD untuk Gerak | Klik untuk Tembak</div>
+    <div id="hud">
+        <b>OPERASI: KAYENLOR CLEAR</b><br>
+        Status: Ready<br>
+        Gerak: WASD | Tembak: Klik Kiri
+    </div>
     <canvas id="gameCanvas"></canvas>
 
     <script>
@@ -21,92 +24,139 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
+        // --- DATA MAP & ENTITY ---
+        const walls = [
+            {x: 300, y: 0, w: 20, h: 300},    // Tembok vertikal
+            {x: 300, y: 400, w: 20, h: 500},  // Celah pintu
+            {x: 0, y: 300, w: 300, h: 20},    // Tembok horizontal
+            {x: 600, y: 200, w: 400, h: 20}   // Rintangan tengah
+        ];
+
         const player = {
             x: 100, y: 100,
-            size: 20,
-            color: '#00ff00',
+            size: 15,
             angle: 0,
-            speed: 3
+            speed: 2.5
         };
 
         const bullets = [];
+        const enemies = [
+            {x: 800, y: 450, alive: true},
+            {x: 500, y: 100, alive: true}
+        ];
+
         const keys = {};
 
-        // Mouse Tracking
-        let mouseX = 0;
-        let mouseY = 0;
-
+        // --- INPUT HANDLER ---
         window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
-        window.addEventListener('mousemove', e => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-        });
+        let mouseX = 0, mouseY = 0;
+        window.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+        window.addEventListener('mousedown', shoot);
 
-        window.addEventListener('mousedown', () => {
+        function shoot() {
             bullets.push({
                 x: player.x,
                 y: player.y,
                 angle: player.angle,
-                speed: 10
-            });
-        });
-
-        function update() {
-            // Movement
-            if (keys['w']) player.y -= player.speed;
-            if (keys['s']) player.y += player.speed;
-            if (keys['a']) player.x -= player.speed;
-            if (keys['d']) player.x += player.speed;
-
-            // Rotate player to mouse
-            player.angle = Math.atan2(mouseY - player.y, mouseX - player.x);
-
-            // Update Bullets
-            bullets.forEach((b, index) => {
-                b.x += Math.cos(b.angle) * b.speed;
-                b.y += Math.sin(b.angle) * b.speed;
-                if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
-                    bullets.splice(index, 1);
-                }
+                speed: 12
             });
         }
 
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // --- LOGIC ---
+        function checkCollision(newX, newY) {
+            for (let w of walls) {
+                if (newX + 10 > w.x && newX - 10 < w.x + w.w &&
+                    newY + 10 > w.y && newY - 10 < w.y + w.h) return true;
+            }
+            return false;
+        }
 
-            // Draw Bullets
-            ctx.fillStyle = 'yellow';
-            bullets.forEach(b => {
-                ctx.beginPath();
-                ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
-                ctx.fill();
+        function update() {
+            let nextX = player.x;
+            let nextY = player.y;
+
+            if (keys['w']) nextY -= player.speed;
+            if (keys['s']) nextY += player.speed;
+            if (keys['a']) nextX -= player.speed;
+            if (keys['d']) nextX += player.speed;
+
+            if (!checkCollision(nextX, player.y)) player.x = nextX;
+            if (!checkCollision(player.x, nextY)) player.y = nextY;
+
+            player.angle = Math.atan2(mouseY - player.y, mouseX - player.x);
+
+            // Peluru & Hit Detection
+            bullets.forEach((b, i) => {
+                b.x += Math.cos(b.angle) * b.speed;
+                b.y += Math.sin(b.angle) * b.speed;
+
+                // Tabrakan peluru ke dinding
+                if (checkCollision(b.x, b.y)) bullets.splice(i, 1);
+
+                // Tabrakan peluru ke musuh
+                enemies.forEach(en => {
+                    if (en.alive && Math.hypot(en.x - b.x, en.y - b.y) < 20) {
+                        en.alive = false;
+                        bullets.splice(i, 1);
+                    }
+                });
+            });
+        }
+
+        // --- RENDERING ---
+        function draw() {
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Gambar Dinding
+            ctx.fillStyle = '#555';
+            walls.forEach(w => ctx.fillRect(w.x, w.y, w.w, w.h));
+
+            // Gambar Musuh
+            enemies.forEach(en => {
+                if (en.alive) {
+                    ctx.fillStyle = 'red';
+                    ctx.beginPath();
+                    ctx.arc(en.x, en.y, 12, 0, Math.PI*2);
+                    ctx.fill();
+                }
             });
 
-            // Draw Player
+            // Gambar Peluru
+            ctx.fillStyle = '#ff0';
+            bullets.forEach(b => {
+                ctx.beginPath(); ctx.arc(b.x, b.y, 2, 0, Math.PI*2); ctx.fill();
+            });
+
+            // Senter / Line of Sight (Efek CQB)
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y);
+            ctx.arc(player.x, player.y, 300, player.angle - 0.5, player.angle + 0.5);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(255, 255, 200, 0.1)';
+            ctx.fill();
+            ctx.restore();
+
+            // Gambar Player
             ctx.save();
             ctx.translate(player.x, player.y);
             ctx.rotate(player.angle);
-            
-            // Body
-            ctx.fillStyle = player.color;
-            ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
-            
-            // Gun indicator
-            ctx.fillStyle = 'black';
-            ctx.fillRect(player.size/2, -2, 10, 4);
-            
+            ctx.fillStyle = '#3498db'; // Biru (Tactical Unit)
+            ctx.fillRect(-15, -15, 30, 30);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(15, -3, 10, 6); // Senjata
             ctx.restore();
         }
 
-        function loop() {
+        function gameLoop() {
             update();
             draw();
-            requestAnimationFrame(loop);
+            requestAnimationFrame(gameLoop);
         }
 
-        loop();
+        gameLoop();
     </script>
 </body>
 </html>
-
