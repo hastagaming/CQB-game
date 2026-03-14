@@ -3,17 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CQB Tactical - Bangi Edition v1.9</title>
+    <title>CQB Tactical - Bangi Edition v1.9.1</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; color: #0f0; }
         canvas { display: block; }
         
         #landscape-msg { position: fixed; top:0; left:0; width:100%; height:100%; background:#000; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
-
         .overlay { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; background: rgba(0,0,0,0.95); }
         .menu-btn { width: 250px; padding: 15px; margin: 8px; border: 2px solid #0f0; background: rgba(0,20,0,0.5); color: #0f0; font-weight: bold; cursor: pointer; text-align: center; }
         .menu-btn:hover { background: #0f0; color: #000; }
-
         #game-hud { position: absolute; top: 20px; left: 20px; display: none; pointer-events: none; z-index: 500; font-size: 14px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; }
 
         /* CONTROLS */
@@ -37,9 +35,9 @@
     <div id="landscape-msg"><h1>🔄 ROTATE TO LANDSCAPE</h1></div>
 
     <div id="main-menu" class="overlay">
-        <h1>CQB TACTICAL: BANGI v1.9</h1>
+        <h1>CQB: BANGI TACTICAL</h1>
         <div class="menu-btn" onclick="initGame()">SOLO MISSION</div>
-        <div class="menu-btn" onclick="location.reload()">BACK TO MENU</div>
+        <div class="menu-btn" onclick="window.location.href='about:blank'" style="color:red; border-color:red;">QUIT</div>
     </div>
 
     <div id="win-screen" class="overlay" style="display:none;">
@@ -54,7 +52,7 @@
 
     <div id="game-hud">
         HP: <span id="hp-val">100</span> | TANGGO: <span id="en-val">0</span><br>
-        GRENADES: <span id="gren-val">3</span> | KEYCARD: <span id="key-val">LOCKED</span>
+        GRENADES: <span id="gren-val">3</span> | KEYCARD: <span id="key-val">MISSING</span>
     </div>
 
     <div id="mobile-ui">
@@ -79,23 +77,28 @@
         let playing = false, isWin = false, isDead = false;
         const TILE = 64;
 
-        // Map (3: Keycard Lokasi)
+        /* MAP LOGIC:
+           1: Wall
+           2: Normal Door (Bisa dibuka langsung)
+           4: Locked Door (Butuh Keycard)
+           3: Keycard (Item)
+           0: Floor
+        */
         const world = [
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
             [1,0,0,0,1,0,0,0,0,0,3,0,0,0,1],
             [1,0,1,0,2,0,0,1,1,0,0,1,1,0,1],
-            [1,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
-            [1,1,2,1,1,0,0,2,0,0,0,2,0,0,1],
-            [1,0,0,0,0,0,0,1,0,0,0,1,0,0,1],
+            [1,0,0,0,1,0,0,1,0,0,0,0,0,0,1],
+            [1,1,2,1,1,0,0,1,1,1,4,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
         let player = { x: 96, y: 96, angle: 0, hp: 100, speed: 4, hasKey: false, grenades: 3 };
         let enemies = [
-            {x: 420, y: 100, hp: 100, patDir: 1, base: 100}, 
-            {x: 700, y: 200, hp: 100, patDir: 1, base: 200}, 
-            {x: 550, y: 300, hp: 100, patDir: -1, base: 300},
-            {x: 850, y: 100, hp: 100, patDir: 1, base: 100}
+            {x: 420, y: 150, hp: 100, patDir: 1, base: 150}, 
+            {x: 750, y: 300, hp: 100, patDir: 1, base: 300}, 
+            {x: 850, y: 150, hp: 100, patDir: -1, base: 150}
         ];
         let bullets = [], enemyBullets = [], grenades = [];
         let moveState = { up:false, down:false, left:false, right:false };
@@ -132,16 +135,17 @@
             const gx = Math.floor(player.x/TILE), gy = Math.floor(player.y/TILE);
             [[-1,0],[1,0],[0,-1],[0,1]].forEach(d => {
                 let tx = gx+d[0], ty = gy+d[1];
-                if(world[ty] && world[ty][tx] === 2) {
+                if(world[ty] && world[ty][tx] === 2) world[ty][tx] = 0; // Pintu Biasa
+                if(world[ty] && world[ty][tx] === 4) { // Pintu Kunci
                     if(player.hasKey) world[ty][tx] = 0;
-                    else alert("Butuh Keycard! Cari benda kuning di ujung ruangan.");
+                    else alert("Pintu ini terkunci! Cari Keycard Kuning.");
                 }
             });
         }
 
         function hitWall(nx, ny) {
             const gx = Math.floor(nx/TILE), gy = Math.floor(ny/TILE);
-            return world[gy] && (world[gy][gx] === 1 || world[gy][gx] === 2);
+            return world[gy] && (world[gy][gx] === 1 || world[gy][gx] === 2 || world[gy][gx] === 4);
         }
 
         function update() {
@@ -155,37 +159,33 @@
             if(!hitWall(player.x+dx, player.y)) player.x += dx;
             if(!hitWall(player.x, player.y+dy)) player.y += dy;
 
-            // Collect Keycard
             const gx = Math.floor(player.x/TILE), gy = Math.floor(player.y/TILE);
-            if(world[gy][gx] === 3) { player.hasKey = true; world[gy][gx] = 0; }
+            if(world[gy] && world[gy][gx] === 3) { player.hasKey = true; world[gy][gx] = 0; }
 
-            // Door detection UI
             let doorNearby = false;
-            [[-1,0],[1,0],[0,-1],[0,1]].forEach(d => { if(world[gy+d[1]] && world[gy+d[1]][gx+d[0]] === 2) doorNearby = true; });
+            [[-1,0],[1,0],[0,-1],[0,1]].forEach(d => { 
+                let val = world[gy+d[1]] ? world[gy+d[1]][gx+d[0]] : 0;
+                if(val === 2 || val === 4) doorNearby = true; 
+            });
             document.getElementById('door-btn').style.display = doorNearby ? 'flex' : 'none';
 
-            // Enemy Patrol & AI
             enemies.forEach(en => {
                 if(en.hp <= 0) return;
-                // Patrol Movement (Poin 4)
-                en.y += en.patDir * 1;
-                if(en.y > en.base + 50 || en.y < en.base - 50) en.patDir *= -1;
-
+                en.y += en.patDir * 1.2;
+                if(en.y > en.base + 60 || en.y < en.base - 60) en.patDir *= -1;
                 if(Math.hypot(player.x-en.x, player.y-en.y) < 250 && Math.random() < 0.02) {
                     enemyBullets.push({x:en.x, y:en.y, angle: Math.atan2(player.y-en.y, player.x-en.x), s:6});
                 }
             });
 
-            // Grenade Logic (Poin tambahan)
             grenades.forEach((g, i) => {
                 if(!g.exploded) {
                     g.x += Math.cos(g.angle)*g.s; g.y += Math.sin(g.angle)*g.s;
                     g.s *= 0.95; g.timer--;
                     if(g.timer <= 0) {
                         g.exploded = true;
-                        // Ledakan menghantam musuh sekitar
-                        enemies.forEach(en => { if(Math.hypot(en.x-g.x, en.y-g.y) < 150) en.hp -= 100; });
-                        setTimeout(() => grenades.splice(i,1), 1000);
+                        enemies.forEach(en => { if(Math.hypot(en.x-g.x, en.y-g.y) < 160) en.hp -= 100; });
+                        setTimeout(() => grenades.splice(i,1), 800);
                     }
                 }
             });
@@ -205,7 +205,7 @@
             document.getElementById('hp-val').innerText = player.hp;
             document.getElementById('en-val').innerText = enemies.filter(e => e.hp > 0).length;
             document.getElementById('gren-val').innerText = player.grenades;
-            document.getElementById('key-val').innerText = player.hasKey ? "UNLOCKED" : "LOCKED";
+            document.getElementById('key-val').innerText = player.hasKey ? "FOUND" : "MISSING";
 
             if(enemies.filter(e => e.hp > 0).length === 0) { isWin = true; document.getElementById('win-screen').style.display = 'flex'; }
             if(player.hp <= 0) { isDead = true; document.getElementById('death-screen').style.display = 'flex'; }
@@ -218,8 +218,9 @@
             for(let r=0; r<world.length; r++) {
                 for(let c=0; c<world[r].length; c++) {
                     if(world[r][c] === 1) ctx.fillStyle = '#222';
-                    else if(world[r][c] === 2) ctx.fillStyle = '#5d4037';
-                    else if(world[r][c] === 3) ctx.fillStyle = '#ff0'; // Keycard
+                    else if(world[r][c] === 2) ctx.fillStyle = '#5d4037'; // Pintu Biasa
+                    else if(world[r][c] === 4) ctx.fillStyle = '#1976d2'; // Pintu Biru (Locked)
+                    else if(world[r][c] === 3) ctx.fillStyle = '#ff0'; 
                     else continue;
                     ctx.fillRect(c*TILE, r*TILE, TILE, TILE);
                 }
@@ -228,14 +229,11 @@
             const off = document.createElement('canvas'); off.width = canvas.width; off.height = canvas.height;
             const octx = off.getContext('2d'); octx.fillStyle = 'rgba(0,0,0,0.97)'; octx.fillRect(0,0,canvas.width,canvas.height);
             octx.globalCompositeOperation = 'destination-out';
-            
-            // SENTER PLAYER
             const grad = octx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 250);
             grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
             octx.fillStyle = grad; octx.beginPath(); octx.moveTo(player.x, player.y);
             octx.arc(player.x, player.y, 350, player.angle - 0.6, player.angle + 0.6); octx.fill();
 
-            // GRENADE LIGHT (CAHAYA GRENADE)
             grenades.forEach(g => {
                 const gGrad = octx.createRadialGradient(g.x, g.y, 0, g.x, g.y, g.exploded ? 300 : 80);
                 gGrad.addColorStop(0, g.exploded ? 'rgba(255,255,255,1)' : 'rgba(255,165,0,0.6)');
@@ -244,8 +242,6 @@
             });
 
             enemies.forEach(en => { if(en.hp > 0) { ctx.fillStyle = '#f00'; ctx.beginPath(); ctx.arc(en.x, en.y, 15, 0, Math.PI*2); ctx.fill(); } });
-            
-            // Draw Player
             ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(player.angle);
             ctx.fillStyle = '#1976d2'; ctx.beginPath(); ctx.ellipse(0,0,14,18,0,0,Math.PI*2); ctx.fill();
             ctx.fillStyle = '#000'; ctx.fillRect(10,-3,18,6); ctx.restore();
