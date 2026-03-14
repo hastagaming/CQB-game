@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CQB Tactical - Bangi Edition v2.1 (Humanoid)</title>
+    <title>CQB Tactical - Bangi Edition v2.2 (Dynamic Lighting)</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; color: #0f0; user-select: none; }
         canvas { display: block; }
@@ -12,7 +12,7 @@
         .overlay { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; background: rgba(0,0,0,0.95); }
         .menu-btn { width: 250px; padding: 15px; margin: 8px; border: 2px solid #0f0; background: rgba(0,20,0,0.5); color: #0f0; font-weight: bold; cursor: pointer; text-align: center; }
         .menu-btn:hover { background: #0f0; color: #000; }
-        #game-hud { position: absolute; top: 20px; left: 20px; display: none; pointer-events: none; z-index: 500; font-size: 14px; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 5px; border: 1px solid #0f0; }
+        #game-hud { position: absolute; top: 20px; left: 20px; display: none; pointer-events: none; z-index: 500; font-size: 14px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 5px; border: 1px solid #0f0; box-shadow: 0 0 10px #0f0; }
 
         /* CONTROLS HP */
         #mobile-ui { position: absolute; bottom: 20px; width: 100%; height: 200px; display: none; pointer-events: none; z-index: 1000; }
@@ -35,7 +35,7 @@
     <div id="landscape-msg"><h1>🔄 ROTATE TO LANDSCAPE</h1></div>
 
     <div id="main-menu" class="overlay">
-        <h1>CQB: BANGI OPS<br>v2.1 Humanoid</h1>
+        <h1>CQB: BANGI OPS<br>v2.2 Dynamic Lighting</h1>
         <div class="menu-btn" onclick="initGame()">START MISSION</div>
         <div class="menu-btn" onclick="window.location.href='about:blank'" style="color:red; border-color:red;">QUIT</div>
     </div>
@@ -236,61 +236,47 @@
             }
         }
 
-        // --- FUNGSI DRAW HUMANOID v2.1 ---
         function drawHumanoid(x, y, angle, bodyCol, isEnemy) {
             ctx.save();
             ctx.translate(x, y);
             ctx.rotate(angle);
 
-            // 1. Lengan Kiri (Luar)
+            // Lengan Kiri
             ctx.fillStyle = bodyCol;
-            ctx.beginPath();
-            ctx.ellipse(-12, -8, 8, 16, Math.PI / 4, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.beginPath(); ctx.ellipse(-12, -8, 8, 16, Math.PI / 4, 0, Math.PI * 2); ctx.fill();
             ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
 
-            // 2. Lengan Kanan (Menahan Senjata)
+            // Lengan Kanan 
             ctx.fillStyle = bodyCol;
-            ctx.beginPath();
-            ctx.ellipse(12, 10, 8, 14, -Math.PI / 4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
+            ctx.beginPath(); ctx.ellipse(12, 10, 8, 14, -Math.PI / 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
-            // 3. Badan/Torso (Rompi Taktis)
-            ctx.fillStyle = isEnemy ? '#a00' : '#000'; // Warna rompi berbeda
-            ctx.beginPath();
-            ctx.ellipse(0, 0, 15, 22, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            // Detail rompi taktis
+            // Badan
+            ctx.fillStyle = isEnemy ? '#a00' : '#000';
+            ctx.beginPath(); ctx.ellipse(0, 0, 15, 22, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
             ctx.fillStyle = isEnemy ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.1)';
             ctx.fillRect(-8, -12, 16, 24);
 
-            // 4. Kepala (Helm Taktis)
-            ctx.fillStyle = isEnemy ? '#600' : '#111'; // Helm musuh lebih gelap/merah
-            ctx.beginPath();
-            ctx.arc(0, 0, 11, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            // Visor/Kacamata Taktis
-            ctx.fillStyle = isEnemy ? '#ff0' : '#0ff'; // Mata menyala
-            ctx.fillRect(-6, -6, 12, 3);
+            // Kepala
+            ctx.fillStyle = isEnemy ? '#600' : '#111';
+            ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            // Visor
+            ctx.fillStyle = isEnemy ? '#ff0' : '#0ff'; ctx.fillRect(-6, -6, 12, 3);
 
-            // 5. Senjata (Laras Panjang)
+            // Senjata
             ctx.fillStyle = '#111';
-            ctx.fillRect(10, -5, 25, 6); // Badan senjata
-            ctx.fillRect(32, -4, 10, 4); // Laras
-            if (!isEnemy) { // Detail senjata player
-                ctx.fillStyle = '#ff0'; ctx.fillRect(12, -4, 6, 2); 
-            }
+            ctx.fillRect(10, -5, 25, 6); 
+            ctx.fillRect(32, -4, 10, 4); 
+            if (!isEnemy) { ctx.fillStyle = '#ff0'; ctx.fillRect(12, -4, 6, 2); }
 
             ctx.restore();
         }
 
+        // --- SISTEM CAHAYA BARU ---
         function draw() {
             if(!playing) return;
-            ctx.fillStyle = '#050505'; ctx.fillRect(0,0,canvas.width,canvas.height);
             
+            // Background & Tembok
+            ctx.fillStyle = '#050505'; ctx.fillRect(0,0,canvas.width,canvas.height);
             for(let r=0; r<world.length; r++) {
                 for(let c=0; c<world[r].length; c++) {
                     if(world[r][c] === 1) ctx.fillStyle = '#222';
@@ -302,33 +288,56 @@
                 }
             }
 
-            const off = document.createElement('canvas'); off.width = canvas.width; off.height = canvas.height;
-            const octx = off.getContext('2d'); octx.fillStyle = 'rgba(0,0,0,0.96)'; octx.fillRect(0,0,canvas.width,canvas.height);
-            octx.globalCompositeOperation = 'destination-out';
-            
-            const grad = octx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 300);
-            grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
-            octx.fillStyle = grad; octx.beginPath(); octx.moveTo(player.x, player.y);
-            octx.arc(player.x, player.y, 400, player.angle - 0.7, player.angle + 0.7); octx.fill();
-
-            grenades.forEach(g => {
-                const gGrad = octx.createRadialGradient(g.x, g.y, 0, g.x, g.y, g.exploded ? 350 : 80);
-                gGrad.addColorStop(0, g.exploded ? 'rgba(255,255,255,1)' : 'rgba(255,165,0,0.6)');
-                gGrad.addColorStop(1, 'rgba(255,255,255,0)');
-                octx.fillStyle = gGrad; octx.beginPath(); octx.arc(g.x, g.y, g.exploded ? 350 : 80, 0, Math.PI*2); octx.fill();
-            });
-
-            // DRAW ENEMIES HUMANOID
+            // Gambar Karakter Terlebih Dahulu (Agar terpengaruh gelap)
             enemies.forEach(en => { if(en.hp > 0) drawHumanoid(en.x, en.y, Math.atan2(player.y-en.y, player.x-en.x), '#c62828', true); });
-            
-            // DRAW PLAYER HUMANOID
             drawHumanoid(player.x, player.y, player.angle, '#1976d2', false);
 
             grenades.forEach(g => { if(!g.exploded) { ctx.fillStyle = 'orange'; ctx.beginPath(); ctx.arc(g.x, g.y, 8, 0, Math.PI*2); ctx.fill(); } });
             ctx.fillStyle = '#ff0'; bullets.forEach(b => ctx.fillRect(b.x-2, b.y-2, 5, 5));
             ctx.fillStyle = '#f00'; enemyBullets.forEach(b => ctx.fillRect(b.x-2, b.y-2, 5, 5));
+
+            // LAPISAN KEGELAPAN (FOG OF WAR)
+            const off = document.createElement('canvas'); off.width = canvas.width; off.height = canvas.height;
+            const octx = off.getContext('2d'); 
+            octx.fillStyle = 'rgba(0,0,0,0.98)'; // Kegelapan pekat
+            octx.fillRect(0,0,canvas.width,canvas.height);
+            octx.globalCompositeOperation = 'destination-out';
             
+            // 1. Senter Utama Karakter
+            const grad = octx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 350);
+            grad.addColorStop(0, 'rgba(255,255,255,1)'); 
+            grad.addColorStop(1, 'rgba(255,255,255,0)');
+            octx.fillStyle = grad; octx.beginPath(); octx.moveTo(player.x, player.y);
+            octx.arc(player.x, player.y, 400, player.angle - 0.7, player.angle + 0.7); octx.fill();
+
+            // 2. Cahaya Ambient (Bulat Kecil Keliling Player)
+            const ambientGrad = octx.createRadialGradient(player.x, player.y, 0, player.x, player.y, 70);
+            ambientGrad.addColorStop(0, 'rgba(255,255,255,1)');
+            ambientGrad.addColorStop(1, 'rgba(255,255,255,0)');
+            octx.fillStyle = ambientGrad; octx.beginPath(); octx.arc(player.x, player.y, 70, 0, Math.PI*2); octx.fill();
+
+            // 3. Cahaya Ledakan Granat
+            grenades.forEach(g => {
+                const gGrad = octx.createRadialGradient(g.x, g.y, 0, g.x, g.y, g.exploded ? 350 : 80);
+                gGrad.addColorStop(0, g.exploded ? 'rgba(255,255,255,1)' : 'rgba(255,165,0,0.8)');
+                gGrad.addColorStop(1, 'rgba(255,255,255,0)');
+                octx.fillStyle = gGrad; octx.beginPath(); octx.arc(g.x, g.y, g.exploded ? 350 : 80, 0, Math.PI*2); octx.fill();
+            });
+
+            // Terapkan Kegelapan ke Canvas Utama
+            ctx.globalCompositeOperation = 'source-over';
             ctx.drawImage(off, 0, 0);
+
+            // 4. EFEK "BERSINAR" VOLUMETRIC PADA SENTER PANDANGAN
+            ctx.globalCompositeOperation = 'lighter'; // Menambah nilai terang
+            const glowGrad = ctx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 350);
+            glowGrad.addColorStop(0, 'rgba(150, 220, 255, 0.25)'); // Sinar kebiruan tipis
+            glowGrad.addColorStop(1, 'rgba(150, 220, 255, 0)');
+            ctx.fillStyle = glowGrad; ctx.beginPath(); ctx.moveTo(player.x, player.y);
+            ctx.arc(player.x, player.y, 400, player.angle - 0.7, player.angle + 0.7); ctx.fill();
+            
+            // Kembalikan Mode Draw Normal
+            ctx.globalCompositeOperation = 'source-over'; 
         }
 
         function loop() { update(); draw(); requestAnimationFrame(loop); }
