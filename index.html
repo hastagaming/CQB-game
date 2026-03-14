@@ -5,50 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CQB Tactical - Bangi Edition</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; color: #0f0; }
         canvas { display: block; }
         
-        /* LAYOUT MENU & UI */
-        #ui-overlay { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; background: rgba(0,0,0,0.9); color: #0f0; }
-        .menu-btn { width: 200px; padding: 15px; margin: 10px; border: 2px solid #0f0; background: none; color: #0f0; font-weight: bold; cursor: pointer; text-align: center; }
-        .menu-btn:hover { background: #0f0; color: #000; }
-        
-        #game-hud { position: absolute; top: 20px; left: 20px; color: #0f0; display: none; pointer-events: none; z-index: 500; font-size: 18px; }
-
-        /* WIN SCREEN */
-        #win-screen { 
-            position: absolute; width: 100%; height: 100%; display: none; 
-            flex-direction: column; align-items: center; justify-content: center; 
-            z-index: 4000; background: rgba(0,20,0,0.8); color: #fff; text-align: center;
+        /* FORCE LANDSCAPE OVERLAY */
+        #landscape-msg {
+            position: fixed; top:0; left:0; width:100%; height:100%; background:#000;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9999; text-align: center;
         }
-        #win-screen h2 { font-size: 40px; color: #ff0; text-shadow: 0 0 20px #ff0; margin-bottom: 20px; }
-        
+
+        /* UI SCREENS (MENU, WIN, LOSS) */
+        .overlay {
+            position: absolute; width: 100%; height: 100%; display: flex; 
+            flex-direction: column; align-items: center; justify-content: center; 
+            z-index: 2000; background: rgba(0,0,0,0.9);
+        }
+        .menu-btn { 
+            width: 220px; padding: 15px; margin: 10px; border: 2px solid #0f0; 
+            background: none; color: #0f0; font-weight: bold; cursor: pointer; text-align: center; 
+        }
+        .menu-btn:hover { background: #0f0; color: #000; box-shadow: 0 0 15px #0f0; }
+
+        #death-screen { display: none; background: rgba(50, 0, 0, 0.9); }
+        #win-screen { display: none; background: rgba(0, 50, 0, 0.9); }
+        #game-hud { position: absolute; top: 20px; left: 20px; display: none; pointer-events: none; z-index: 500; font-size: 18px; }
+
         /* CONTROLS */
         #mobile-ui { position: absolute; bottom: 20px; width: 100%; height: 180px; display: none; pointer-events: none; z-index: 1000; }
         .dpad { position: absolute; left: 20px; bottom: 10px; width: 150px; height: 150px; pointer-events: auto; }
         .d-btn { position: absolute; width: 48px; height: 48px; background: rgba(255,255,255,0.1); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; color: white; border-radius: 8px; font-size: 20px; }
         #up { left: 51px; top: 0; } #down { left: 51px; bottom: 0; } #left { left: 0; top: 51px; } #right { right: 0; top: 51px; }
-        
-        .action-area { position: absolute; right: 25px; bottom: 15px; pointer-events: auto; display: flex; flex-direction: column; gap: 15px; }
-        .btn-circle { width: 75px; height: 75px; border-radius: 50%; border: 3px solid #fff; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .action-area { position: absolute; right: 25px; bottom: 15px; pointer-events: auto; display: flex; flex-direction: column; gap: 10px; }
+        .btn-circle { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #fff; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
         #fire-btn { background: rgba(255,0,0,0.5); }
         #door-btn { background: rgba(0,255,0,0.5); display: none; }
 
         @media (pointer: coarse) { #mobile-ui { display: block; } }
+        @media (orientation: portrait) { #landscape-msg { display: flex; } }
     </style>
 </head>
 <body>
 
-    <div id="ui-overlay">
-        <h1>CQB: BANGI TACTICAL</h1>
+    <div id="landscape-msg">
+        <h1>🔄 PLEASE ROTATE DEVICE</h1>
+        <p>Gunakan Mode Landscape untuk Bermain</p>
+    </div>
+
+    <div id="ui-overlay" class="overlay">
+        <h1 style="text-shadow: 0 0 10px #0f0;">CQB: BANGI OPS</h1>
         <div class="menu-btn" onclick="initGame()">START MISSION</div>
-        <div class="menu-btn" onclick="alert('Dev: Nasa - Bangi\nMisi: Habisi semua musuh!')">ABOUT</div>
         <div class="menu-btn" onclick="window.location.href='about:blank'" style="color:red; border-color:red;">QUIT</div>
     </div>
 
-    <div id="win-screen">
-        <h2>YOU WIN MY FELLAS SOLDIER!</h2>
-        <div class="menu-btn" onclick="location.reload()">PLAY AGAIN</div>
+    <div id="win-screen" class="overlay">
+        <h1 style="color: #ff0;">YOU WIN MY FELLAS SOLDIER!</h1>
+        <div class="menu-btn" onclick="location.reload()">BACK TO MAIN MENU</div>
+    </div>
+
+    <div id="death-screen" class="overlay">
+        <h2 style="color: #fff;">THANKS PALL FOR THE TEAM :')</h2>
+        <div class="menu-btn" onclick="location.reload()">BACK TO MAIN MENU</div>
     </div>
 
     <div id="game-hud">HP: <span id="hp-val">100</span> | TANGGO: <span id="en-val">0</span></div>
@@ -71,11 +88,9 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        let playing = false;
-        let isWin = false;
+        let playing = false, isWin = false, isDead = false;
         const TILE = 64;
 
-        // Map: 1=Wall, 2=Closed Door, 0=Floor
         const world = [
             [1,1,1,1,1,1,1,1,1,1,1,1],
             [1,0,0,0,1,0,0,0,0,0,0,1],
@@ -86,11 +101,10 @@
             [1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
-        const player = { x: 96, y: 96, angle: 0, hp: 100, speed: 4 };
-        const enemies = [{x: 550, y: 150, hp: 100}, {x: 400, y: 300, hp: 100}, {x: 650, y: 80, hp: 100}];
-        const bullets = [];
-        const enemyBullets = [];
-        const moveState = { up:false, down:false, left:false, right:false };
+        let player = { x: 96, y: 96, angle: 0, hp: 100, speed: 4 };
+        let enemies = [{x: 550, y: 150, hp: 100}, {x: 400, y: 300, hp: 100}, {x: 650, y: 80, hp: 100}];
+        let bullets = [], enemyBullets = [];
+        let moveState = { up:false, down:false, left:false, right:false };
 
         function initGame() {
             document.getElementById('ui-overlay').style.display = 'none';
@@ -109,7 +123,7 @@
         }
         setupBtn('up','up'); setupBtn('down','down'); setupBtn('left','left'); setupBtn('right','right');
         
-        document.getElementById('fire-btn').addEventListener('touchstart', e => { e.preventDefault(); shoot(); });
+        document.getElementById('fire-btn').addEventListener('touchstart', e => { e.preventDefault(); if(playing && !isDead) shoot(); });
         document.getElementById('door-btn').addEventListener('touchstart', e => { e.preventDefault(); interact(); });
 
         function shoot() { bullets.push({x:player.x, y:player.y, angle:player.angle, s:12}); }
@@ -127,7 +141,7 @@
         }
 
         function update() {
-            if(!playing || isWin) return;
+            if(!playing || isWin || isDead) return;
             let dx=0, dy=0;
             if(moveState.up) { dy -= player.speed; player.angle = -Math.PI/2; }
             if(moveState.down) { dy += player.speed; player.angle = Math.PI/2; }
@@ -137,13 +151,11 @@
             if(!hitWall(player.x+dx, player.y)) player.x += dx;
             if(!hitWall(player.x, player.y+dy)) player.y += dy;
 
-            // Door detection
             const gx = Math.floor(player.x/TILE), gy = Math.floor(player.y/TILE);
             let doorNearby = false;
             [[-1,0],[1,0],[0,-1],[0,1]].forEach(d => { if(world[gy+d[1]] && world[gy+d[1]][gx+d[0]] === 2) doorNearby = true; });
             document.getElementById('door-btn').style.display = doorNearby ? 'flex' : 'none';
 
-            // Enemy AI & Bullet Logic
             bullets.forEach((b, i) => {
                 b.x += Math.cos(b.angle)*b.s; b.y += Math.sin(b.angle)*b.s;
                 if(hitWall(b.x, b.y)) bullets.splice(i,1);
@@ -154,8 +166,7 @@
 
             enemies.forEach(en => {
                 if(en.hp <= 0) return;
-                const d = Math.hypot(player.x-en.x, player.y-en.y);
-                if(d < 250 && Math.random() < 0.02) {
+                if(Math.hypot(player.x-en.x, player.y-en.y) < 250 && Math.random() < 0.02) {
                     enemyBullets.push({x:en.x, y:en.y, angle: Math.atan2(player.y-en.y, player.x-en.x), s:6});
                 }
             });
@@ -170,21 +181,13 @@
             document.getElementById('hp-val').innerText = player.hp;
             document.getElementById('en-val').innerText = aliveEnemies;
 
-            // CHECK WIN CONDITION
-            if(aliveEnemies === 0 && !isWin) {
-                isWin = true;
-                document.getElementById('win-screen').style.display = 'flex';
-                document.getElementById('game-hud').style.display = 'none';
-            }
-
-            if(player.hp <= 0) location.reload();
+            if(aliveEnemies === 0) { isWin = true; document.getElementById('win-screen').style.display = 'flex'; }
+            if(player.hp <= 0) { isDead = true; document.getElementById('death-screen').style.display = 'flex'; }
         }
 
         function draw() {
             if(!playing) return;
             ctx.fillStyle = '#111'; ctx.fillRect(0,0,canvas.width,canvas.height);
-
-            // 1. Draw Map Base
             for(let r=0; r<world.length; r++) {
                 for(let c=0; c<world[r].length; c++) {
                     if(world[r][c] === 1) ctx.fillStyle = '#333';
@@ -193,32 +196,21 @@
                     ctx.fillRect(c*TILE, r*TILE, TILE, TILE);
                 }
             }
-
-            // 2. Flashlight Effect
-            const off = document.createElement('canvas');
-            off.width = canvas.width; off.height = canvas.height;
-            const octx = off.getContext('2d');
-            octx.fillStyle = 'rgba(0,0,0,0.94)';
-            octx.fillRect(0,0,canvas.width,canvas.height);
+            const off = document.createElement('canvas'); off.width = canvas.width; off.height = canvas.height;
+            const octx = off.getContext('2d'); octx.fillStyle = 'rgba(0,0,0,0.95)'; octx.fillRect(0,0,canvas.width,canvas.height);
             octx.globalCompositeOperation = 'destination-out';
-            
             const grad = octx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 250);
             grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
-            octx.fillStyle = grad;
-            octx.beginPath(); octx.moveTo(player.x, player.y);
-            octx.arc(player.x, player.y, 300, player.angle - 0.6, player.angle + 0.6);
-            octx.fill();
+            octx.fillStyle = grad; octx.beginPath(); octx.moveTo(player.x, player.y);
+            octx.arc(player.x, player.y, 300, player.angle - 0.6, player.angle + 0.6); octx.fill();
 
-            // 3. Draw Entities
             enemies.forEach(en => { if(en.hp > 0) { ctx.fillStyle = 'red'; ctx.beginPath(); ctx.arc(en.x, en.y, 15, 0, Math.PI*2); ctx.fill(); } });
-            
             ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(player.angle);
             ctx.fillStyle = '#1976d2'; ctx.beginPath(); ctx.ellipse(0,0,14,18,0,0,Math.PI*2); ctx.fill();
             ctx.fillStyle = '#000'; ctx.fillRect(10,-3,18,6); ctx.restore();
 
             ctx.fillStyle = '#ff0'; bullets.forEach(b => ctx.fillRect(b.x, b.y, 4, 4));
             ctx.fillStyle = '#f00'; enemyBullets.forEach(b => ctx.fillRect(b.x, b.y, 4, 4));
-
             ctx.drawImage(off, 0, 0);
         }
 
