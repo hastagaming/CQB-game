@@ -3,41 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CQB Bangi Tactical - Multiplayer</title>
+    <title>CQB Bangi Tactical v1.0.0</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { margin: 0; background: #111; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; }
+        body { margin: 0; background: #111; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; -webkit-user-select: none; }
         canvas { display: block; background: #222; }
         
-        /* UI INFO & MULTIPLAYER */
-        #ui { position: absolute; top: 10px; left: 10px; color: #0f0; pointer-events: none; z-index: 100; font-size: 12px; text-shadow: 1px 1px #000; }
-        .controls-input { pointer-events: auto; background: rgba(0,0,0,0.5); color: #0f0; border: 1px solid #0f0; padding: 5px; margin-top: 5px; }
+        #ui { position: absolute; top: 10px; left: 10px; color: #0f0; pointer-events: none; z-index: 100; font-size: 11px; text-shadow: 1px 1px #000; }
+        .controls-input { pointer-events: auto; background: rgba(0,0,0,0.7); color: #0f0; border: 1px solid #0f0; padding: 4px; margin-top: 4px; font-size: 10px; }
 
-        /* KONTROL HP (GAYA MINECRAFT) - Hanya muncul di layar sentuh */
-        .mobile-ui { display: none; position: absolute; bottom: 20px; width: 100%; height: 180px; pointer-events: none; z-index: 200; }
-        .dpad { position: absolute; left: 20px; bottom: 20px; width: 150px; height: 150px; pointer-events: auto; }
-        .d-btn { position: absolute; width: 45px; height: 45px; background: rgba(255,255,255,0.2); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; user-select: none; }
-        #up { left: 50px; top: 0; }
-        #down { left: 50px; bottom: 0; }
-        #left { left: 0; top: 50px; }
-        #right { right: 0; top: 50px; }
+        /* D-PAD MINECRAFT STYLE (FIXED) */
+        #mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            height: 160px;
+            pointer-events: none;
+            z-index: 1000;
+            display: block; /* Paksa muncul untuk testing, nanti diatur JS */
+        }
+        .dpad { position: absolute; left: 20px; bottom: 10px; width: 140px; height: 140px; pointer-events: auto; }
+        .d-btn { 
+            position: absolute; width: 45px; height: 45px; 
+            background: rgba(255,255,255,0.15); 
+            border: 2px solid rgba(255,255,255,0.4); 
+            display: flex; align-items: center; justify-content: center; 
+            color: white; font-size: 20px; border-radius: 4px;
+        }
+        #up { left: 47px; top: 0; }
+        #down { left: 47px; bottom: 0; }
+        #left { left: 0; top: 47px; }
+        #right { right: 0; top: 47px; }
         
-        .action-area { position: absolute; right: 30px; bottom: 40px; pointer-events: auto; }
-        .fire-btn { width: 80px; height: 80px; background: rgba(255,0,0,0.3); border: 3px solid #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
-
-        @media (pointer: coarse) { .mobile-ui { display: block; } }
+        .action-area { position: absolute; right: 25px; bottom: 25px; pointer-events: auto; }
+        .fire-btn { 
+            width: 75px; height: 75px; 
+            background: rgba(255,0,0,0.25); 
+            border: 3px solid rgba(255,255,255,0.5); 
+            border-radius: 50%; display: flex; align-items: center; 
+            justify-content: center; color: white; font-weight: bold; 
+        }
     </style>
 </head>
 <body>
 
     <div id="ui">
-        <b>MISSION: CLEAR HOUSE</b><br>
-        ID: <span id="my-id">...</span> | Status: <span id="status">Solo</span><br>
+        <b>CQB TACTICAL v1.0.0</b><br>
+        ID: <span id="my-id">...</span> | <span id="status">Solo</span><br>
         <input type="text" id="peer-id-input" class="controls-input" placeholder="ID Teman">
         <button onclick="connectToPeer()" class="controls-input">JOIN</button>
     </div>
 
-    <div class="mobile-ui">
+    <div id="mobile-controls">
         <div class="dpad">
             <div id="up" class="d-btn">▲</div>
             <div id="left" class="d-btn">◀</div>
@@ -54,76 +71,65 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            // Sembunyikan D-Pad jika layar sangat lebar (PC)
+            document.getElementById('mobile-controls').style.display = window.innerWidth > 1000 ? 'none' : 'block';
+        }
+        window.addEventListener('resize', resize);
+        resize();
 
-        // --- MAP RUMAH & INTERIOR ---
+        // --- MAP DATA ---
         const TILE = 60;
-        // 1: Tembok, 2: Pintu, 3: Meja/Kursi, 0: Lantai
         const world = [
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,1,0,0,0,0,3,0,0,0,1],
-            [1,0,3,0,2,0,0,0,0,3,0,0,0,1],
-            [1,0,0,0,1,0,0,1,1,2,1,1,0,1],
-            [1,1,2,1,1,0,0,1,0,0,0,1,0,1],
-            [1,0,0,0,0,0,0,2,0,3,0,2,0,1],
-            [1,0,3,3,0,0,0,1,0,0,0,1,0,1],
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,1,0,0,0,3,1],
+            [1,0,3,0,2,0,0,0,0,1],
+            [1,0,0,0,1,1,2,1,0,1],
+            [1,1,2,1,1,0,0,1,0,1],
+            [1,0,0,0,0,0,0,2,0,1],
+            [1,1,1,1,1,1,1,1,1,1]
         ];
 
-        const player = { x: 90, y: 90, angle: 0, speed: 3.5, id: 'local' };
-        let otherPlayer = null;
-        const enemies = [{x: 500, y: 150, alive: true}, {x: 650, y: 350, alive: true}, {x: 150, y: 380, alive: true}];
+        const player = { x: 90, y: 90, angle: 0, speed: 3.5 };
+        const enemies = [{x: 400, y: 150, alive: true}, {x: 450, y: 320, alive: true}];
         const bullets = [];
         const keys = {};
         const moveState = { up: false, down: false, left: false, right: false };
 
-        // --- MULTIPLAYER (PEERJS) ---
+        // --- MULTIPLAYER ---
         const peer = new Peer();
         let conn;
         peer.on('open', id => document.getElementById('my-id').innerText = id);
         peer.on('connection', c => { conn = c; setupConn(); });
-
-        function connectToPeer() {
-            conn = peer.connect(document.getElementById('peer-id-input').value);
-            setupConn();
-        }
-
+        function connectToPeer() { conn = peer.connect(document.getElementById('peer-id-input').value); setupConn(); }
         function setupConn() {
             document.getElementById('status').innerText = "Connected";
-            conn.on('data', data => {
-                if(data.type === 'move') otherPlayer = data.p;
-                if(data.type === 'shoot') bullets.push(data.b);
-            });
+            conn.on('data', data => { if(data.type==='shoot') bullets.push(data.b); });
         }
 
-        // --- INPUT HANDLERS ---
+        // --- CONTROLS ---
         window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
-        window.addEventListener('mousemove', e => {
-            player.angle = Math.atan2(e.clientY - player.y, e.clientX - player.x);
-        });
-        window.addEventListener('mousedown', () => { if(window.innerWidth > 800) shoot(); });
+        window.addEventListener('mousemove', e => { player.angle = Math.atan2(e.clientY - player.y, e.clientX - player.x); });
+        window.addEventListener('mousedown', () => { if(window.innerWidth > 1000) shoot(); });
 
-        // Mobile D-Pad Logic
-        function bindMobile(id, dir) {
-            const el = document.getElementById(id);
-            el.addEventListener('touchstart', (e) => { e.preventDefault(); moveState[dir] = true; el.style.background = "rgba(255,255,255,0.5)"; });
-            el.addEventListener('touchend', (e) => { e.preventDefault(); moveState[dir] = false; el.style.background = "rgba(255,255,255,0.2)"; });
+        function bind(id, dir) {
+            const btn = document.getElementById(id);
+            const start = (e) => { e.preventDefault(); moveState[dir] = true; btn.style.background = "rgba(255,255,255,0.4)"; };
+            const end = (e) => { e.preventDefault(); moveState[dir] = false; btn.style.background = "rgba(255,255,255,0.15)"; };
+            btn.addEventListener('touchstart', start); btn.addEventListener('touchend', end);
+            btn.addEventListener('mousedown', start); btn.addEventListener('mouseup', end);
         }
-        bindMobile('up', 'up'); bindMobile('down', 'down'); bindMobile('left', 'left'); bindMobile('right', 'right');
-        document.getElementById('fire-btn').addEventListener('touchstart', (e) => { e.preventDefault(); shoot(); });
+        bind('up','up'); bind('down','down'); bind('left','left'); bind('right','right');
+        document.getElementById('fire-btn').addEventListener('touchstart', (e)=>{ e.preventDefault(); shoot(); });
+        document.getElementById('fire-btn').addEventListener('mousedown', (e)=>{ shoot(); });
 
-        function shoot() {
-            const b = { x: player.x, y: player.y, angle: player.angle, speed: 12 };
-            bullets.push(b);
-            if(conn) conn.send({ type: 'shoot', b: b });
-        }
+        function shoot() { bullets.push({ x: player.x, y: player.y, angle: player.angle, speed: 12 }); }
 
-        // --- CORE ENGINE ---
         function checkWall(x, y) {
-            const gx = Math.floor(x / TILE);
-            const gy = Math.floor(y / TILE);
+            const gx = Math.floor(x/TILE); const gy = Math.floor(y/TILE);
             return world[gy] && (world[gy][gx] === 1 || world[gy][gx] === 3);
         }
 
@@ -134,82 +140,33 @@
             if (keys['a'] || moveState.left) dx -= player.speed;
             if (keys['d'] || moveState.right) dx += player.speed;
 
-            if (dx !== 0 && dy !== 0) { dx *= 0.7; dy *= 0.7; } // Diagonal speed fix
-
             if (!checkWall(player.x + dx, player.y)) player.x += dx;
             if (!checkWall(player.x, player.y + dy)) player.y += dy;
-
-            // Di HP, angle mengikuti arah gerak jika tidak ada mouse
-            if (('ontouchstart' in window) && (dx !== 0 || dy !== 0)) {
-                player.angle = Math.atan2(dy, dx);
-            }
+            
+            if (dx !== 0 || dy !== 0) player.angle = Math.atan2(dy, dx);
 
             bullets.forEach((b, i) => {
-                b.x += Math.cos(b.angle) * b.speed;
-                b.y += Math.sin(b.angle) * b.speed;
-                if(checkWall(b.x, b.y)) bullets.splice(i, 1);
-                
-                enemies.forEach(en => {
-                    if(en.alive && Math.hypot(en.x - b.x, en.y - b.y) < 15) {
-                        en.alive = false; bullets.splice(i, 1);
-                    }
-                });
+                b.x += Math.cos(b.angle)*b.speed; b.y += Math.sin(b.angle)*b.speed;
+                if(checkWall(b.x, b.y)) bullets.splice(i,1);
             });
-
-            if(conn) conn.send({ type: 'move', p: { x: player.x, y: player.y, angle: player.angle }});
-        }
-
-        // --- DRAWING ---
-        function drawUnit(x, y, angle, color, name) {
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.rotate(angle);
-            // Body Tactical
-            ctx.fillStyle = color;
-            ctx.beginPath(); ctx.ellipse(0, 0, 13, 18, 0, 0, Math.PI*2); ctx.fill();
-            ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.stroke();
-            // Head
-            ctx.fillStyle = '#222';
-            ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-            // Weapon
-            ctx.fillStyle = '#000'; ctx.fillRect(10, -2, 18, 5);
-            ctx.restore();
-            // Label
-            ctx.fillStyle = 'white'; ctx.font = "bold 11px Arial"; ctx.textAlign = "center";
-            ctx.fillText(name, x, y - 25);
         }
 
         function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw World
+            ctx.fillStyle = '#222'; ctx.fillRect(0,0,canvas.width,canvas.height);
             for(let r=0; r<world.length; r++) {
                 for(let c=0; c<world[r].length; c++) {
-                    if(world[r][c] === 1) ctx.fillStyle = '#333'; // Wall
-                    else if(world[r][c] === 2) ctx.fillStyle = '#5d4037'; // Door
-                    else if(world[r][c] === 3) ctx.fillStyle = '#263238'; // Furniture
-                    else {
-                        ctx.fillStyle = '#222'; // Floor
-                        ctx.fillRect(c*TILE, r*TILE, TILE, TILE);
-                        ctx.strokeStyle = '#2a2a2a'; ctx.strokeRect(c*TILE, r*TILE, TILE, TILE);
-                        continue;
-                    }
+                    if(world[r][c] === 1) ctx.fillStyle = '#444';
+                    else if(world[r][c] === 3) ctx.fillStyle = '#2c3e50';
+                    else continue;
                     ctx.fillRect(c*TILE, r*TILE, TILE, TILE);
                 }
             }
-
-            enemies.forEach(en => {
-                if(en.alive) {
-                    ctx.fillStyle = '#c62828';
-                    ctx.beginPath(); ctx.arc(en.x, en.y, 12, 0, Math.PI*2); ctx.fill();
-                }
-            });
-
-            drawUnit(player.x, player.y, player.angle, '#1976d2', "YOU");
-            if(otherPlayer) drawUnit(otherPlayer.x, otherPlayer.y, otherPlayer.angle, '#f57c00', "TEAM");
-
-            ctx.fillStyle = '#ffeb3b';
-            bullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, 2, 0, Math.PI*2); ctx.fill(); });
+            // Draw Player
+            ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(player.angle);
+            ctx.fillStyle = '#3498db'; ctx.beginPath(); ctx.ellipse(0,0,12,15,0,0,Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#000'; ctx.fillRect(10,-2,15,4); ctx.restore();
+            // Draw Bullets
+            ctx.fillStyle = 'yellow'; bullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, 2, 0, Math.PI*2); ctx.fill(); });
         }
 
         function loop() { update(); draw(); requestAnimationFrame(loop); }
