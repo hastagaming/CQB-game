@@ -8,36 +8,35 @@
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; color: #0f0; }
         canvas { display: block; }
         
-        /* FORCE LANDSCAPE OVERLAY */
         #landscape-msg {
             position: fixed; top:0; left:0; width:100%; height:100%; background:#000;
             display: none; flex-direction: column; align-items: center; justify-content: center;
             z-index: 9999; text-align: center;
         }
 
-        /* UI SCREENS (MENU, WIN, LOSS) */
         .overlay {
             position: absolute; width: 100%; height: 100%; display: flex; 
             flex-direction: column; align-items: center; justify-content: center; 
-            z-index: 2000; background: rgba(0,0,0,0.9);
+            z-index: 2000; background: rgba(0,0,0,0.92);
         }
-        .menu-btn { 
-            width: 220px; padding: 15px; margin: 10px; border: 2px solid #0f0; 
-            background: none; color: #0f0; font-weight: bold; cursor: pointer; text-align: center; 
-        }
-        .menu-btn:hover { background: #0f0; color: #000; box-shadow: 0 0 15px #0f0; }
 
-        #death-screen { display: none; background: rgba(50, 0, 0, 0.9); }
-        #win-screen { display: none; background: rgba(0, 50, 0, 0.9); }
-        #game-hud { position: absolute; top: 20px; left: 20px; display: none; pointer-events: none; z-index: 500; font-size: 18px; }
+        h1 { font-size: 35px; text-shadow: 0 0 15px #0f0; margin-bottom: 20px; text-align: center; }
+
+        .menu-btn { 
+            width: 250px; padding: 15px; margin: 8px; border: 2px solid #0f0; 
+            background: rgba(0,20,0,0.5); color: #0f0; font-weight: bold; cursor: pointer; text-align: center; 
+        }
+        .menu-btn:hover { background: #0f0; color: #000; box-shadow: 0 0 20px #0f0; }
+
+        #game-hud { position: absolute; top: 20px; left: 20px; display: none; pointer-events: none; z-index: 500; }
 
         /* CONTROLS */
         #mobile-ui { position: absolute; bottom: 20px; width: 100%; height: 180px; display: none; pointer-events: none; z-index: 1000; }
-        .dpad { position: absolute; left: 20px; bottom: 10px; width: 150px; height: 150px; pointer-events: auto; }
-        .d-btn { position: absolute; width: 48px; height: 48px; background: rgba(255,255,255,0.1); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; color: white; border-radius: 8px; font-size: 20px; }
+        .dpad { position: absolute; left: 30px; bottom: 10px; width: 150px; height: 150px; pointer-events: auto; }
+        .d-btn { position: absolute; width: 48px; height: 48px; background: rgba(255,255,255,0.1); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; color: white; border-radius: 8px; }
         #up { left: 51px; top: 0; } #down { left: 51px; bottom: 0; } #left { left: 0; top: 51px; } #right { right: 0; top: 51px; }
-        .action-area { position: absolute; right: 25px; bottom: 15px; pointer-events: auto; display: flex; flex-direction: column; gap: 10px; }
-        .btn-circle { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #fff; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .action-area { position: absolute; right: 30px; bottom: 15px; pointer-events: auto; display: flex; flex-direction: column; gap: 12px; }
+        .btn-circle { width: 75px; height: 75px; border-radius: 50%; border: 3px solid #fff; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
         #fire-btn { background: rgba(255,0,0,0.5); }
         #door-btn { background: rgba(0,255,0,0.5); display: none; }
 
@@ -47,24 +46,23 @@
 </head>
 <body>
 
-    <div id="landscape-msg">
-        <h1>🔄 PLEASE ROTATE DEVICE</h1>
-        <p>Gunakan Mode Landscape untuk Bermain</p>
+    <div id="landscape-msg"><h1>🔄 ROTATE TO LANDSCAPE</h1></div>
+
+    <div id="main-menu" class="overlay">
+        <h1>CQB TACTICAL:<br>BANGI OPS</h1>
+        <div class="menu-btn" onclick="initGame()">SOLO MISSION</div>
+        <div class="menu-btn" onclick="alert('Multiplayer segera hadir di update berikutnya!')">MULTIPLAYER</div>
+        <div class="menu-btn" onclick="alert('Dev: Nasa\nLoc: Dsn. Bangi, Kediri\nSelesaikan misi pembersihan area!')">ABOUT GAME</div>
+        <div class="menu-btn" onclick="window.location.href='about:blank'" style="color:#f00; border-color:#f00;">QUIT</div>
     </div>
 
-    <div id="ui-overlay" class="overlay">
-        <h1 style="text-shadow: 0 0 10px #0f0;">CQB: BANGI OPS</h1>
-        <div class="menu-btn" onclick="initGame()">START MISSION</div>
-        <div class="menu-btn" onclick="window.location.href='about:blank'" style="color:red; border-color:red;">QUIT</div>
-    </div>
-
-    <div id="win-screen" class="overlay">
+    <div id="win-screen" class="overlay" style="display:none;">
         <h1 style="color: #ff0;">YOU WIN MY FELLAS SOLDIER!</h1>
         <div class="menu-btn" onclick="location.reload()">BACK TO MAIN MENU</div>
     </div>
 
-    <div id="death-screen" class="overlay">
-        <h2 style="color: #fff;">THANKS PALL FOR THE TEAM :')</h2>
+    <div id="death-screen" class="overlay" style="display:none;">
+        <h2 style="color: #fff; text-align:center;">THANKS PALL FOR THE TEAM :')</h2>
         <div class="menu-btn" onclick="location.reload()">BACK TO MAIN MENU</div>
     </div>
 
@@ -91,23 +89,30 @@
         let playing = false, isWin = false, isDead = false;
         const TILE = 64;
 
+        // Map Desain Bangi (1:Wall, 2:Door, 0:Floor)
         const world = [
-            [1,1,1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,1,0,0,0,0,0,0,1],
-            [1,0,1,0,2,0,0,1,1,0,0,1],
-            [1,0,0,0,1,0,0,1,0,0,0,1],
-            [1,1,2,1,1,0,0,2,0,0,0,1],
-            [1,0,0,0,0,0,0,1,0,0,0,1],
-            [1,1,1,1,1,1,1,1,1,1,1,1]
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,0,2,0,0,1,1,0,0,1,1,0,1],
+            [1,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+            [1,1,2,1,1,0,0,2,0,0,0,2,0,0,1],
+            [1,0,0,0,0,0,0,1,0,0,0,1,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
         let player = { x: 96, y: 96, angle: 0, hp: 100, speed: 4 };
-        let enemies = [{x: 550, y: 150, hp: 100}, {x: 400, y: 300, hp: 100}, {x: 650, y: 80, hp: 100}];
+        // Koordinat musuh yang dipastikan TIDAK di dalam tembok
+        let enemies = [
+            {x: 420, y: 100, hp: 100}, 
+            {x: 700, y: 200, hp: 100}, 
+            {x: 550, y: 300, hp: 100},
+            {x: 850, y: 100, hp: 100}
+        ];
         let bullets = [], enemyBullets = [];
         let moveState = { up:false, down:false, left:false, right:false };
 
         function initGame() {
-            document.getElementById('ui-overlay').style.display = 'none';
+            document.getElementById('main-menu').style.display = 'none';
             document.getElementById('game-hud').style.display = 'block';
             playing = true;
             resize();
@@ -160,13 +165,13 @@
                 b.x += Math.cos(b.angle)*b.s; b.y += Math.sin(b.angle)*b.s;
                 if(hitWall(b.x, b.y)) bullets.splice(i,1);
                 enemies.forEach(en => {
-                    if(en.hp > 0 && Math.hypot(en.x-b.x, en.y-b.y) < 20) { en.hp -= 50; bullets.splice(i,1); }
+                    if(en.hp > 0 && Math.hypot(en.x-b.x, en.y-b.y) < 22) { en.hp -= 50; bullets.splice(i,1); }
                 });
             });
 
             enemies.forEach(en => {
                 if(en.hp <= 0) return;
-                if(Math.hypot(player.x-en.x, player.y-en.y) < 250 && Math.random() < 0.02) {
+                if(Math.hypot(player.x-en.x, player.y-en.y) < 300 && Math.random() < 0.02) {
                     enemyBullets.push({x:en.x, y:en.y, angle: Math.atan2(player.y-en.y, player.x-en.x), s:6});
                 }
             });
@@ -187,24 +192,25 @@
 
         function draw() {
             if(!playing) return;
-            ctx.fillStyle = '#111'; ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.fillStyle = '#050505'; ctx.fillRect(0,0,canvas.width,canvas.height);
             for(let r=0; r<world.length; r++) {
                 for(let c=0; c<world[r].length; c++) {
-                    if(world[r][c] === 1) ctx.fillStyle = '#333';
+                    if(world[r][c] === 1) ctx.fillStyle = '#222';
                     else if(world[r][c] === 2) ctx.fillStyle = '#5d4037';
                     else continue;
                     ctx.fillRect(c*TILE, r*TILE, TILE, TILE);
                 }
             }
+
             const off = document.createElement('canvas'); off.width = canvas.width; off.height = canvas.height;
-            const octx = off.getContext('2d'); octx.fillStyle = 'rgba(0,0,0,0.95)'; octx.fillRect(0,0,canvas.width,canvas.height);
+            const octx = off.getContext('2d'); octx.fillStyle = 'rgba(0,0,0,0.96)'; octx.fillRect(0,0,canvas.width,canvas.height);
             octx.globalCompositeOperation = 'destination-out';
-            const grad = octx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 250);
+            const grad = octx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 280);
             grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
             octx.fillStyle = grad; octx.beginPath(); octx.moveTo(player.x, player.y);
-            octx.arc(player.x, player.y, 300, player.angle - 0.6, player.angle + 0.6); octx.fill();
+            octx.arc(player.x, player.y, 350, player.angle - 0.7, player.angle + 0.7); octx.fill();
 
-            enemies.forEach(en => { if(en.hp > 0) { ctx.fillStyle = 'red'; ctx.beginPath(); ctx.arc(en.x, en.y, 15, 0, Math.PI*2); ctx.fill(); } });
+            enemies.forEach(en => { if(en.hp > 0) { ctx.fillStyle = '#f00'; ctx.beginPath(); ctx.arc(en.x, en.y, 15, 0, Math.PI*2); ctx.fill(); } });
             ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(player.angle);
             ctx.fillStyle = '#1976d2'; ctx.beginPath(); ctx.ellipse(0,0,14,18,0,0,Math.PI*2); ctx.fill();
             ctx.fillStyle = '#000'; ctx.fillRect(10,-3,18,6); ctx.restore();
