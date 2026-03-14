@@ -19,4 +19,4 @@ Selamat datang di versi rilis resmi **CQB Bangi Tactical**. Game taktis 2D ini s
 3. Untuk Multiplayer: Bagikan ID kamu yang muncul di pojok kiri atas ke temanmu.
 
 ---
-*Dibuat dengan ❤️ di Bangi, Kediri.*
+*Dibuat dengan senang ❤️ oleh nasa.*
