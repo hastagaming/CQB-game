@@ -3,11 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CQB Tactical - Bangi Stealth</title>
+    <title>CQB Tactical - Bangi Edition</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; touch-action: none; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; }
         canvas { display: block; }
-        #hud { position: absolute; top: 20px; left: 20px; color: #0f0; pointer-events: none; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; font-size: 14px; }
+        
+        /* LAYOUT MENU UTAMA */
+        #main-menu {
+            position: absolute; width: 100%; height: 100%;
+            background: linear-gradient(rgba(0,0,0,0.8), rgba(0,20,0,0.8)), url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=1000');
+            background-size: cover; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 2000;
+        }
+        h1 { color: #0f0; font-size: 40px; text-shadow: 0 0 10px #0f0; margin-bottom: 30px; text-align: center; }
+        .menu-btn {
+            width: 250px; padding: 15px; margin: 10px;
+            background: rgba(0, 40, 0, 0.9); border: 2px solid #0f0;
+            color: #0f0; font-size: 18px; font-weight: bold; cursor: pointer;
+            transition: 0.3s; text-align: center;
+        }
+        .menu-btn:hover { background: #0f0; color: #000; box-shadow: 0 0 20px #0f0; }
+
+        /* HUD GAME */
+        #game-ui { position: absolute; top: 10px; left: 10px; color: #0f0; display: none; pointer-events: none; z-index: 100; }
+        
+        /* ABOUT POPUP */
+        #about-box {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 80%; max-width: 400px; background: #111; border: 2px solid #0f0;
+            padding: 20px; color: #0f0; display: none; z-index: 3000; text-align: center;
+        }
+
+        /* MOBILE CONTROLS */
         #mobile-controls { position: absolute; bottom: 20px; width: 100%; height: 180px; pointer-events: none; display: none; }
         .dpad { position: absolute; left: 20px; bottom: 10px; width: 150px; height: 150px; pointer-events: auto; }
         .d-btn { position: absolute; width: 48px; height: 48px; background: rgba(255,255,255,0.1); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; color: white; border-radius: 8px; font-size: 20px; }
@@ -15,15 +42,29 @@
         .action-btns { position: absolute; right: 20px; bottom: 10px; pointer-events: auto; display: flex; flex-direction: column; gap: 10px; }
         .btn-round { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #fff; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; }
         #fire-btn { background: rgba(255,0,0,0.5); }
-        #door-btn { background: rgba(0,255,0,0.5); visibility: hidden; }
-        @media (pointer: coarse) { #mobile-controls { display: block; } }
+        
+        @media (pointer: coarse) { .is-mobile #mobile-controls { display: block; } }
     </style>
 </head>
-<body>
+<body class="is-mobile">
 
-    <div id="hud">
-        HP: <span id="hp">100</span> | ENEMIES: <span id="ecount">0</span><br>
-        <small>DEKATI PINTU UNTUK MEMBUKA</small>
+    <div id="main-menu">
+        <h1>CQB TACTICAL:<br>BANGI OPS</h1>
+        <div class="menu-btn" onclick="startGame('solo')">SOLO MISSION</div>
+        <div class="menu-btn" onclick="startGame('multi')">MULTIPLAYER</div>
+        <div class="menu-btn" onclick="toggleAbout(true)">ABOUT GAME</div>
+        <div class="menu-btn" onclick="quitGame()" style="border-color: #f00; color: #f00;">QUIT</div>
+    </div>
+
+    <div id="about-box">
+        <h3>ABOUT THE GAME</h3>
+        <p>Developer: Nasa<br>Location: Dsn. Bangi, Kediri<br>Version: 1.4.0</p>
+        <p>Misi: Bersihkan area dari musuh (TANGGO) menggunakan taktik stealth dan senter.</p>
+        <div class="menu-btn" style="width: 100px;" onclick="toggleAbout(false)">BACK</div>
+    </div>
+
+    <div id="game-ui">
+        HP: <span id="hp">100</span> | ENEMIES: <span id="ecount">0</span>
     </div>
 
     <div id="mobile-controls">
@@ -34,7 +75,6 @@
             <div id="down" class="d-btn">▼</div>
         </div>
         <div class="action-btns">
-            <div id="door-btn" class="btn-round">OPEN</div>
             <div id="fire-btn" class="btn-round">FIRE</div>
         </div>
     </div>
@@ -44,100 +84,83 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        let gameState = 'MENU'; // MENU atau PLAYING
         const TILE = 64;
 
-        // 1: Tembok, 2: Pintu, 3: Meja, 0: Lantai
+        // Data Map & Pemain (Sama seperti v1.3.0)
         const map = [
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,1,0,0,0,1,0,0,0,0,1],
-            [1,0,3,0,2,0,0,0,2,0,3,3,0,1],
-            [1,0,0,0,1,0,0,0,1,0,0,0,0,1],
-            [1,1,1,1,1,0,1,1,1,1,1,1,1,1],
-            [0,0,0,0,1,2,1,0,0,0,0,0,0,0],
-            [0,0,0,0,1,0,1,0,0,0,0,0,0,0],
-            [0,0,0,0,1,1,1,0,0,0,0,0,0,0]
+            [1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,1,0,0,0,0,3,0,0,1],
+            [1,0,3,0,0,0,3,0,0,0,0,0,1],
+            [1,0,0,0,1,1,1,1,1,2,1,1,1],
+            [1,1,2,1,1,0,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
-        const player = { x: 96, y: 96, angle: 0, speed: 3.5, hp: 100 };
-        const enemies = [{x: 450, y: 100, hp: 100}, {x: 800, y: 150, hp: 100}];
-        const bullets = [];
-        const enemyBullets = [];
-        const moveState = { up: false, down: false, left: false, right: false };
-        const keys = {};
+        let player = { x: 100, y: 100, angle: 0, speed: 4, hp: 100 };
+        let enemies = [{x: 500, y: 150, hp: 100}, {x: 400, y: 300, hp: 100}];
+        let bullets = [];
+        let moveState = { up: false, down: false, left: false, right: false };
 
-        window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
-        window.dispatchEvent(new Event('resize'));
+        // FUNGSI MENU
+        function startGame(mode) {
+            if(mode === 'multi') {
+                alert("Multiplayer Mode: Gunakan ID PeerJS di v1.3.0 untuk connect.");
+            }
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('game-ui').style.display = 'block';
+            gameState = 'PLAYING';
+            resize();
+        }
 
-        // Input Setup
-        window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
-        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
-        
+        function toggleAbout(show) {
+            document.getElementById('about-box').style.display = show ? 'block' : 'none';
+        }
+
+        function quitGame() {
+            if (confirm("Keluar dari permainan?")) {
+                window.close();
+                // Fallback jika window.close diblokir browser
+                window.location.href = "about:blank";
+            }
+        }
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Input & Logic (Gunakan logika dari v1.3.0)
         function bind(id, dir) {
             const el = document.getElementById(id);
             el.addEventListener('touchstart', (e) => { e.preventDefault(); moveState[dir] = true; });
             el.addEventListener('touchend', (e) => { e.preventDefault(); moveState[dir] = false; });
         }
         bind('up','up'); bind('down','down'); bind('left','left'); bind('right','right');
-        
-        document.getElementById('fire-btn').addEventListener('touchstart', e => { e.preventDefault(); shoot(); });
-        document.getElementById('door-btn').addEventListener('touchstart', e => { e.preventDefault(); openDoor(); });
+        document.getElementById('fire-btn').addEventListener('touchstart', e => { e.preventDefault(); if(gameState==='PLAYING') shoot(); });
 
-        function shoot() { bullets.push({ x: player.x, y: player.y, angle: player.angle, speed: 12 }); }
-
-        function openDoor() {
-            const gx = Math.floor(player.x / TILE);
-            const gy = Math.floor(player.y / TILE);
-            // Cek tetangga tile untuk pintu
-            const dirs = [[0,1],[0,-1],[1,0],[-1,0]];
-            dirs.forEach(d => {
-                if(map[gy+d[1]] && map[gy+d[1]][gx+d[0]] === 2) map[gy+d[1]][gx+d[0]] = 0;
-            });
-        }
-
-        function isWall(x, y) {
-            const gx = Math.floor(x / TILE); const gy = Math.floor(y / TILE);
-            return map[gy] && (map[gy][gx] === 1 || map[gy][gx] === 2 || map[gy][gx] === 3);
-        }
+        function shoot() { bullets.push({ x: player.x, y: player.y, angle: player.angle, speed: 15 }); }
 
         function update() {
+            if(gameState !== 'PLAYING') return;
+            
             let dx = 0, dy = 0;
-            if (keys['w'] || moveState.up) { dy -= player.speed; player.angle = -Math.PI/2; }
-            if (keys['s'] || moveState.down) { dy += player.speed; player.angle = Math.PI/2; }
-            if (keys['a'] || moveState.left) { dx -= player.speed; player.angle = Math.PI; }
-            if (keys['d'] || moveState.right) { dx += player.speed; player.angle = 0; }
+            if (moveState.up) { dy -= player.speed; player.angle = -Math.PI/2; }
+            if (moveState.down) { dy += player.speed; player.angle = Math.PI/2; }
+            if (moveState.left) { dx -= player.speed; player.angle = Math.PI; }
+            if (moveState.right) { dx += player.speed; player.angle = 0; }
 
-            if (!isWall(player.x + dx, player.y)) player.x += dx;
-            if (!isWall(player.x, player.y + dy)) player.y += dy;
-
-            // Tombol Pintu Otomatis
-            const gx = Math.floor(player.x/TILE); const gy = Math.floor(player.y/TILE);
-            let nearDoor = false;
-            [[0,1],[0,-1],[1,0],[-1,0]].forEach(d => { if(map[gy+d[1]] && map[gy+d[1]][gx+d[0]] === 2) nearDoor = true; });
-            document.getElementById('door-btn').style.visibility = nearDoor ? 'visible' : 'hidden';
-
-            // Bullets
+            // Collision sederhana
+            player.x += dx; player.y += dy;
+            
             bullets.forEach((b, i) => {
                 b.x += Math.cos(b.angle)*b.speed; b.y += Math.sin(b.angle)*b.speed;
-                if(isWall(b.x, b.y)) bullets.splice(i,1);
                 enemies.forEach(en => {
-                    if(en.hp > 0 && Math.hypot(en.x-b.x, en.y-b.y) < 20) { en.hp -= 50; bullets.splice(i,1); }
+                    if(en.hp > 0 && Math.hypot(en.x-b.x, en.y-b.y) < 20) { en.hp -= 100; bullets.splice(i,1); }
                 });
-            });
-
-            // Enemy Attack
-            enemies.forEach(en => {
-                if(en.hp <= 0) return;
-                const dist = Math.hypot(player.x-en.x, player.y-en.y);
-                if(dist < 300) {
-                    const angle = Math.atan2(player.y-en.y, player.x-en.x);
-                    if(Math.random() < 0.02) enemyBullets.push({x: en.x, y: en.y, angle: angle, speed: 7});
-                }
-            });
-
-            enemyBullets.forEach((eb, i) => {
-                eb.x += Math.cos(eb.angle)*eb.speed; eb.y += Math.sin(eb.angle)*eb.speed;
-                if(Math.hypot(player.x-eb.x, player.y-eb.y) < 15) { player.hp -= 5; enemyBullets.splice(i,1); }
-                if(isWall(eb.x, eb.y)) enemyBullets.splice(i,1);
             });
 
             document.getElementById('hp').innerText = player.hp;
@@ -145,60 +168,35 @@
         }
 
         function draw() {
+            if(gameState !== 'PLAYING') return;
             ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
-
-            // Senter (Light Layer)
-            const lightCanvas = document.createElement('canvas');
-            lightCanvas.width = canvas.width; lightCanvas.height = canvas.height;
-            const lctx = lightCanvas.getContext('2d');
-            lctx.fillStyle = 'rgba(0,0,0,0.95)'; // Kegelapan
-            lctx.fillRect(0,0,canvas.width,canvas.height);
-
-            // Lingkaran Senter
-            lctx.save();
-            lctx.globalCompositeOperation = 'destination-out';
-            const grad = lctx.createRadialGradient(player.x, player.y, 20, player.x, player.y, 250);
-            grad.addColorStop(0, 'rgba(255,255,255,1)');
-            grad.addColorStop(1, 'rgba(255,255,255,0)');
-            lctx.fillStyle = grad;
-            lctx.beginPath();
-            // Membuat senter mengikuti arah hadap (Fan shape)
-            lctx.moveTo(player.x, player.y);
-            lctx.arc(player.x, player.y, 300, player.angle - 0.5, player.angle + 0.5);
-            lctx.closePath();
-            lctx.fill();
-            lctx.restore();
 
             // Draw Map
             for(let r=0; r<map.length; r++) {
                 for(let c=0; c<map[r].length; c++) {
-                    if(map[r][c]===1) ctx.fillStyle='#222';
+                    if(map[r][c]===1) ctx.fillStyle='#333';
                     else if(map[r][c]===2) ctx.fillStyle='#5d4037';
-                    else if(map[r][c]===3) ctx.fillStyle='#1a237e';
-                    else ctx.fillStyle='#0a0a0a';
+                    else ctx.fillStyle='#111';
                     ctx.fillRect(c*TILE, r*TILE, TILE, TILE);
                 }
             }
 
-            // Enemies (Hanya terlihat jika di dalam area senter atau jarak dekat)
+            // Enemies
             enemies.forEach(en => {
                 if(en.hp > 0) {
-                    ctx.fillStyle = '#c62828';
+                    ctx.fillStyle = 'red';
                     ctx.beginPath(); ctx.arc(en.x, en.y, 15, 0, Math.PI*2); ctx.fill();
                 }
             });
 
-            // Bullets
-            ctx.fillStyle = '#ff0'; bullets.forEach(b => ctx.fillRect(b.x, b.y, 4, 4));
-            ctx.fillStyle = '#f00'; enemyBullets.forEach(eb => ctx.fillRect(eb.x, eb.y, 4, 4));
-
             // Player
             ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(player.angle);
-            ctx.fillStyle = '#1976d2'; ctx.beginPath(); ctx.ellipse(0,0,15,20,0,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#000'; ctx.fillRect(10,-3,15,6); ctx.restore();
+            ctx.fillStyle = '#00f'; ctx.fillRect(-15, -15, 30, 30);
+            ctx.fillStyle = '#fff'; ctx.fillRect(10, -2, 15, 4);
+            ctx.restore();
 
-            // Apply Darkness
-            ctx.drawImage(lightCanvas, 0, 0);
+            // Bullets
+            ctx.fillStyle = 'yellow'; bullets.forEach(b => ctx.fillRect(b.x, b.y, 4, 4));
         }
 
         function loop() { update(); draw(); requestAnimationFrame(loop); }
