@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CQB Tactical - Bangi Edition v1.9.1</title>
+    <title>CQB Tactical - Bangi Edition v2.0</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; color: #0f0; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; color: #0f0; user-select: none; }
         canvas { display: block; }
         
         #landscape-msg { position: fixed; top:0; left:0; width:100%; height:100%; background:#000; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
         .overlay { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; background: rgba(0,0,0,0.95); }
         .menu-btn { width: 250px; padding: 15px; margin: 8px; border: 2px solid #0f0; background: rgba(0,20,0,0.5); color: #0f0; font-weight: bold; cursor: pointer; text-align: center; }
         .menu-btn:hover { background: #0f0; color: #000; }
-        #game-hud { position: absolute; top: 20px; left: 20px; display: none; pointer-events: none; z-index: 500; font-size: 14px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; }
+        #game-hud { position: absolute; top: 20px; left: 20px; display: none; pointer-events: none; z-index: 500; font-size: 14px; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 5px; border: 1px solid #0f0; }
 
-        /* CONTROLS */
+        /* CONTROLS HP */
         #mobile-ui { position: absolute; bottom: 20px; width: 100%; height: 200px; display: none; pointer-events: none; z-index: 1000; }
         .dpad { position: absolute; left: 30px; bottom: 20px; width: 150px; height: 150px; pointer-events: auto; }
         .d-btn { position: absolute; width: 48px; height: 48px; background: rgba(255,255,255,0.1); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; color: white; border-radius: 8px; }
@@ -42,11 +42,12 @@
 
     <div id="win-screen" class="overlay" style="display:none;">
         <h1 style="color: #ff0;">YOU WIN MY FELLAS SOLDIER!</h1>
+        <p style="color: white; margin-bottom: 20px;">Area Bangi sudah aman.</p>
         <div class="menu-btn" onclick="location.reload()">BACK TO MAIN MENU</div>
     </div>
 
     <div id="death-screen" class="overlay" style="display:none;">
-        <h2>THANKS PALL FOR THE TEAM :')</h2>
+        <h2 style="color: #f00;">THANKS PALL FOR THE TEAM :')</h2>
         <div class="menu-btn" onclick="location.reload()">BACK TO MAIN MENU</div>
     </div>
 
@@ -77,13 +78,7 @@
         let playing = false, isWin = false, isDead = false;
         const TILE = 64;
 
-        /* MAP LOGIC:
-           1: Wall
-           2: Normal Door (Bisa dibuka langsung)
-           4: Locked Door (Butuh Keycard)
-           3: Keycard (Item)
-           0: Floor
-        */
+        /* MAP LOGIC: 1=Wall, 2=Normal Door, 4=Locked Door, 3=Keycard, 0=Floor */
         const world = [
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
             [1,0,0,0,1,0,0,0,0,0,3,0,0,0,1],
@@ -102,6 +97,7 @@
         ];
         let bullets = [], enemyBullets = [], grenades = [];
         let moveState = { up:false, down:false, left:false, right:false };
+        const keys = {}; // Untuk PC Controls
 
         function initGame() {
             document.getElementById('main-menu').style.display = 'none';
@@ -111,6 +107,14 @@
 
         function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
         window.addEventListener('resize', resize);
+
+        // -- INPUT CONTROLS HYBRID (PC & MOBILE) --
+        window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+        window.addEventListener('mousemove', e => { 
+            if(playing && !('ontouchstart' in window)) player.angle = Math.atan2(e.clientY - player.y, e.clientX - player.x); 
+        });
+        window.addEventListener('mousedown', e => { if(playing && !isDead && !('ontouchstart' in window)) shoot(); });
 
         function setupBtn(id, dir) {
             const el = document.getElementById(id);
@@ -123,7 +127,7 @@
         document.getElementById('grenade-btn').addEventListener('touchstart', e => { e.preventDefault(); if(playing && !isDead) throwGrenade(); });
         document.getElementById('door-btn').addEventListener('touchstart', e => { e.preventDefault(); interact(); });
 
-        function shoot() { bullets.push({x:player.x, y:player.y, angle:player.angle, s:12}); }
+        function shoot() { bullets.push({x:player.x, y:player.y, angle:player.angle, s:15}); }
         function throwGrenade() {
             if(player.grenades > 0) {
                 grenades.push({x:player.x, y:player.y, angle:player.angle, s:6, timer: 60, exploded: false});
@@ -136,9 +140,9 @@
             [[-1,0],[1,0],[0,-1],[0,1]].forEach(d => {
                 let tx = gx+d[0], ty = gy+d[1];
                 if(world[ty] && world[ty][tx] === 2) world[ty][tx] = 0; // Pintu Biasa
-                if(world[ty] && world[ty][tx] === 4) { // Pintu Kunci
+                if(world[ty] && world[ty][tx] === 4) { // Pintu Biru
                     if(player.hasKey) world[ty][tx] = 0;
-                    else alert("Pintu ini terkunci! Cari Keycard Kuning.");
+                    else alert("Pintu BIRU terkunci! Cari benda KUNING (Keycard).");
                 }
             });
         }
@@ -151,17 +155,21 @@
         function update() {
             if(!playing || isWin || isDead) return;
             let dx=0, dy=0;
-            if(moveState.up) { dy -= player.speed; player.angle = -Math.PI/2; }
-            if(moveState.down) { dy += player.speed; player.angle = Math.PI/2; }
-            if(moveState.left) { dx -= player.speed; player.angle = Math.PI; }
-            if(moveState.right) { dx += player.speed; player.angle = 0; }
+            
+            // Gerak HP & PC
+            if(keys['w'] || moveState.up) { dy -= player.speed; if('ontouchstart' in window) player.angle = -Math.PI/2; }
+            if(keys['s'] || moveState.down) { dy += player.speed; if('ontouchstart' in window) player.angle = Math.PI/2; }
+            if(keys['a'] || moveState.left) { dx -= player.speed; if('ontouchstart' in window) player.angle = Math.PI; }
+            if(keys['d'] || moveState.right) { dx += player.speed; if('ontouchstart' in window) player.angle = 0; }
             
             if(!hitWall(player.x+dx, player.y)) player.x += dx;
             if(!hitWall(player.x, player.y+dy)) player.y += dy;
 
             const gx = Math.floor(player.x/TILE), gy = Math.floor(player.y/TILE);
+            // Ambil Keycard
             if(world[gy] && world[gy][gx] === 3) { player.hasKey = true; world[gy][gx] = 0; }
 
+            // Deteksi Pintu Dekat
             let doorNearby = false;
             [[-1,0],[1,0],[0,-1],[0,1]].forEach(d => { 
                 let val = world[gy+d[1]] ? world[gy+d[1]][gx+d[0]] : 0;
@@ -169,46 +177,74 @@
             });
             document.getElementById('door-btn').style.display = doorNearby ? 'flex' : 'none';
 
+            // Musuh AI & Patrol
             enemies.forEach(en => {
                 if(en.hp <= 0) return;
-                en.y += en.patDir * 1.2;
+                en.y += en.patDir * 1.5; // Kecepatan patroli
                 if(en.y > en.base + 60 || en.y < en.base - 60) en.patDir *= -1;
-                if(Math.hypot(player.x-en.x, player.y-en.y) < 250 && Math.random() < 0.02) {
-                    enemyBullets.push({x:en.x, y:en.y, angle: Math.atan2(player.y-en.y, player.x-en.x), s:6});
+                // Musuh menembak jika jarak dekat
+                if(Math.hypot(player.x-en.x, player.y-en.y) < 250 && Math.random() < 0.03) {
+                    enemyBullets.push({x:en.x, y:en.y, angle: Math.atan2(player.y-en.y, player.x-en.x), s:7});
                 }
             });
 
+            // Logika Granat
             grenades.forEach((g, i) => {
                 if(!g.exploded) {
                     g.x += Math.cos(g.angle)*g.s; g.y += Math.sin(g.angle)*g.s;
-                    g.s *= 0.95; g.timer--;
+                    g.s *= 0.93; g.timer--;
                     if(g.timer <= 0) {
                         g.exploded = true;
                         enemies.forEach(en => { if(Math.hypot(en.x-g.x, en.y-g.y) < 160) en.hp -= 100; });
-                        setTimeout(() => grenades.splice(i,1), 800);
+                        setTimeout(() => {
+                            let idx = grenades.indexOf(g);
+                            if(idx > -1) grenades.splice(idx,1);
+                        }, 500);
                     }
                 }
             });
 
-            bullets.forEach((b, i) => {
+            // Logika Peluru Player (Loop mundur untuk mencegah bug splice)
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
                 b.x += Math.cos(b.angle)*b.s; b.y += Math.sin(b.angle)*b.s;
-                if(hitWall(b.x, b.y)) bullets.splice(i,1);
-                enemies.forEach(en => { if(en.hp > 0 && Math.hypot(en.x-b.x, en.y-b.y) < 22) { en.hp -= 50; bullets.splice(i,1); } });
-            });
+                let hit = false;
+                if(hitWall(b.x, b.y)) hit = true;
+                
+                enemies.forEach(en => { 
+                    if(!hit && en.hp > 0 && Math.hypot(en.x-b.x, en.y-b.y) < 25) { 
+                        en.hp -= 50; hit = true; 
+                    } 
+                });
+                if(hit) bullets.splice(i,1);
+            }
 
-            enemyBullets.forEach((eb, i) => {
+            // Logika Peluru Musuh
+            for (let i = enemyBullets.length - 1; i >= 0; i--) {
+                let eb = enemyBullets[i];
                 eb.x += Math.cos(eb.angle)*eb.s; eb.y += Math.sin(eb.angle)*eb.s;
-                if(hitWall(eb.x, eb.y)) enemyBullets.splice(i,1);
-                if(Math.hypot(player.x-eb.x, player.y-eb.y) < 15) { player.hp -= 10; enemyBullets.splice(i,1); }
-            });
+                let hit = false;
+                if(hitWall(eb.x, eb.y)) hit = true;
+                if(!hit && Math.hypot(player.x-eb.x, player.y-eb.y) < 18) { player.hp -= 10; hit = true; }
+                if(hit) enemyBullets.splice(i,1);
+            }
 
+            let aliveEnemies = enemies.filter(e => e.hp > 0).length;
             document.getElementById('hp-val').innerText = player.hp;
-            document.getElementById('en-val').innerText = enemies.filter(e => e.hp > 0).length;
+            document.getElementById('en-val').innerText = aliveEnemies;
             document.getElementById('gren-val').innerText = player.grenades;
             document.getElementById('key-val').innerText = player.hasKey ? "FOUND" : "MISSING";
+            document.getElementById('key-val').style.color = player.hasKey ? "#ff0" : "#f00";
 
-            if(enemies.filter(e => e.hp > 0).length === 0) { isWin = true; document.getElementById('win-screen').style.display = 'flex'; }
-            if(player.hp <= 0) { isDead = true; document.getElementById('death-screen').style.display = 'flex'; }
+            // KONDISI MENANG / KALAH (Diperbaiki)
+            if(aliveEnemies === 0 && !isWin) { 
+                isWin = true; 
+                setTimeout(() => { document.getElementById('win-screen').style.display = 'flex'; }, 800); 
+            }
+            if(player.hp <= 0 && !isDead) { 
+                isDead = true; 
+                setTimeout(() => { document.getElementById('death-screen').style.display = 'flex'; }, 500);
+            }
         }
 
         function draw() {
@@ -219,36 +255,44 @@
                 for(let c=0; c<world[r].length; c++) {
                     if(world[r][c] === 1) ctx.fillStyle = '#222';
                     else if(world[r][c] === 2) ctx.fillStyle = '#5d4037'; // Pintu Biasa
-                    else if(world[r][c] === 4) ctx.fillStyle = '#1976d2'; // Pintu Biru (Locked)
-                    else if(world[r][c] === 3) ctx.fillStyle = '#ff0'; 
+                    else if(world[r][c] === 4) ctx.fillStyle = '#0d47a1'; // Pintu Biru (Keycard)
+                    else if(world[r][c] === 3) ctx.fillStyle = '#ff0';    // Item Keycard
                     else continue;
                     ctx.fillRect(c*TILE, r*TILE, TILE, TILE);
                 }
             }
 
             const off = document.createElement('canvas'); off.width = canvas.width; off.height = canvas.height;
-            const octx = off.getContext('2d'); octx.fillStyle = 'rgba(0,0,0,0.97)'; octx.fillRect(0,0,canvas.width,canvas.height);
+            const octx = off.getContext('2d'); octx.fillStyle = 'rgba(0,0,0,0.96)'; octx.fillRect(0,0,canvas.width,canvas.height);
             octx.globalCompositeOperation = 'destination-out';
-            const grad = octx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 250);
+            
+            // Senter
+            const grad = octx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 300);
             grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
             octx.fillStyle = grad; octx.beginPath(); octx.moveTo(player.x, player.y);
-            octx.arc(player.x, player.y, 350, player.angle - 0.6, player.angle + 0.6); octx.fill();
+            octx.arc(player.x, player.y, 400, player.angle - 0.7, player.angle + 0.7); octx.fill();
 
+            // Cahaya Granat
             grenades.forEach(g => {
-                const gGrad = octx.createRadialGradient(g.x, g.y, 0, g.x, g.y, g.exploded ? 300 : 80);
+                const gGrad = octx.createRadialGradient(g.x, g.y, 0, g.x, g.y, g.exploded ? 350 : 80);
                 gGrad.addColorStop(0, g.exploded ? 'rgba(255,255,255,1)' : 'rgba(255,165,0,0.6)');
                 gGrad.addColorStop(1, 'rgba(255,255,255,0)');
-                octx.fillStyle = gGrad; octx.beginPath(); octx.arc(g.x, g.y, g.exploded ? 300 : 80, 0, Math.PI*2); octx.fill();
+                octx.fillStyle = gGrad; octx.beginPath(); octx.arc(g.x, g.y, g.exploded ? 350 : 80, 0, Math.PI*2); octx.fill();
             });
 
-            enemies.forEach(en => { if(en.hp > 0) { ctx.fillStyle = '#f00'; ctx.beginPath(); ctx.arc(en.x, en.y, 15, 0, Math.PI*2); ctx.fill(); } });
+            // Musuh
+            enemies.forEach(en => { if(en.hp > 0) { ctx.fillStyle = '#f00'; ctx.beginPath(); ctx.arc(en.x, en.y, 16, 0, Math.PI*2); ctx.fill(); } });
+            
+            // Pemain
             ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(player.angle);
             ctx.fillStyle = '#1976d2'; ctx.beginPath(); ctx.ellipse(0,0,14,18,0,0,Math.PI*2); ctx.fill();
             ctx.fillStyle = '#000'; ctx.fillRect(10,-3,18,6); ctx.restore();
 
+            // Partikel
             grenades.forEach(g => { if(!g.exploded) { ctx.fillStyle = 'orange'; ctx.beginPath(); ctx.arc(g.x, g.y, 8, 0, Math.PI*2); ctx.fill(); } });
-            ctx.fillStyle = '#ff0'; bullets.forEach(b => ctx.fillRect(b.x, b.y, 4, 4));
-            ctx.fillStyle = '#f00'; enemyBullets.forEach(b => ctx.fillRect(b.x, b.y, 4, 4));
+            ctx.fillStyle = '#ff0'; bullets.forEach(b => ctx.fillRect(b.x-2, b.y-2, 5, 5));
+            ctx.fillStyle = '#f00'; enemyBullets.forEach(b => ctx.fillRect(b.x-2, b.y-2, 5, 5));
+            
             ctx.drawImage(off, 0, 0);
         }
 
