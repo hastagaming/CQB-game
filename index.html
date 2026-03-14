@@ -8,12 +8,20 @@
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; }
         canvas { display: block; }
         
-        /* MENU & UI */
-        #ui-overlay { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; background: rgba(0,0,0,0.85); color: #0f0; }
+        /* LAYOUT MENU & UI */
+        #ui-overlay { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; background: rgba(0,0,0,0.9); color: #0f0; }
         .menu-btn { width: 200px; padding: 15px; margin: 10px; border: 2px solid #0f0; background: none; color: #0f0; font-weight: bold; cursor: pointer; text-align: center; }
         .menu-btn:hover { background: #0f0; color: #000; }
         
         #game-hud { position: absolute; top: 20px; left: 20px; color: #0f0; display: none; pointer-events: none; z-index: 500; font-size: 18px; }
+
+        /* WIN SCREEN */
+        #win-screen { 
+            position: absolute; width: 100%; height: 100%; display: none; 
+            flex-direction: column; align-items: center; justify-content: center; 
+            z-index: 4000; background: rgba(0,20,0,0.8); color: #fff; text-align: center;
+        }
+        #win-screen h2 { font-size: 40px; color: #ff0; text-shadow: 0 0 20px #ff0; margin-bottom: 20px; }
         
         /* CONTROLS */
         #mobile-ui { position: absolute; bottom: 20px; width: 100%; height: 180px; display: none; pointer-events: none; z-index: 1000; }
@@ -33,13 +41,17 @@
 
     <div id="ui-overlay">
         <h1>CQB: BANGI TACTICAL</h1>
-        <div class="menu-btn" onclick="initGame('solo')">SOLO MISSION</div>
-        <div class="menu-btn" onclick="initGame('multi')">MULTIPLAYER</div>
-        <div class="menu-btn" onclick="alert('Developer: Nasa - Dsn. Bangi\nVersi: 1.5.0\nControl: D-Pad & Fire')">ABOUT</div>
+        <div class="menu-btn" onclick="initGame()">START MISSION</div>
+        <div class="menu-btn" onclick="alert('Dev: Nasa - Bangi\nMisi: Habisi semua musuh!')">ABOUT</div>
         <div class="menu-btn" onclick="window.location.href='about:blank'" style="color:red; border-color:red;">QUIT</div>
     </div>
 
-    <div id="game-hud">HP: <span id="hp-val">100</span> | ENEMIES: <span id="en-val">0</span></div>
+    <div id="win-screen">
+        <h2>YOU WIN MY FELLAS SOLDIER!</h2>
+        <div class="menu-btn" onclick="location.reload()">PLAY AGAIN</div>
+    </div>
+
+    <div id="game-hud">HP: <span id="hp-val">100</span> | TANGGO: <span id="en-val">0</span></div>
 
     <div id="mobile-ui">
         <div class="dpad">
@@ -60,6 +72,7 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         let playing = false;
+        let isWin = false;
         const TILE = 64;
 
         // Map: 1=Wall, 2=Closed Door, 0=Floor
@@ -74,12 +87,12 @@
         ];
 
         const player = { x: 96, y: 96, angle: 0, hp: 100, speed: 4 };
-        const enemies = [{x: 500, y: 150, hp: 100}, {x: 400, y: 300, hp: 100}, {x: 600, y: 80, hp: 100}];
+        const enemies = [{x: 550, y: 150, hp: 100}, {x: 400, y: 300, hp: 100}, {x: 650, y: 80, hp: 100}];
         const bullets = [];
         const enemyBullets = [];
         const moveState = { up:false, down:false, left:false, right:false };
 
-        function initGame(m) {
+        function initGame() {
             document.getElementById('ui-overlay').style.display = 'none';
             document.getElementById('game-hud').style.display = 'block';
             playing = true;
@@ -88,14 +101,11 @@
 
         function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
         window.addEventListener('resize', resize);
-        resize();
 
-        // Control Binders
         function setupBtn(id, dir) {
             const el = document.getElementById(id);
-            const start = (e) => { e.preventDefault(); moveState[dir] = true; };
-            const end = (e) => { e.preventDefault(); moveState[dir] = false; };
-            el.addEventListener('touchstart', start); el.addEventListener('touchend', end);
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); moveState[dir] = true; });
+            el.addEventListener('touchend', (e) => { e.preventDefault(); moveState[dir] = false; });
         }
         setupBtn('up','up'); setupBtn('down','down'); setupBtn('left','left'); setupBtn('right','right');
         
@@ -117,7 +127,7 @@
         }
 
         function update() {
-            if(!playing) return;
+            if(!playing || isWin) return;
             let dx=0, dy=0;
             if(moveState.up) { dy -= player.speed; player.angle = -Math.PI/2; }
             if(moveState.down) { dy += player.speed; player.angle = Math.PI/2; }
@@ -156,14 +166,23 @@
                 if(Math.hypot(player.x-eb.x, player.y-eb.y) < 15) { player.hp -= 5; enemyBullets.splice(i,1); }
             });
 
+            const aliveEnemies = enemies.filter(e => e.hp > 0).length;
             document.getElementById('hp-val').innerText = player.hp;
-            document.getElementById('en-val').innerText = enemies.filter(e=>e.hp>0).length;
+            document.getElementById('en-val').innerText = aliveEnemies;
+
+            // CHECK WIN CONDITION
+            if(aliveEnemies === 0 && !isWin) {
+                isWin = true;
+                document.getElementById('win-screen').style.display = 'flex';
+                document.getElementById('game-hud').style.display = 'none';
+            }
+
             if(player.hp <= 0) location.reload();
         }
 
         function draw() {
             if(!playing) return;
-            ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.fillStyle = '#111'; ctx.fillRect(0,0,canvas.width,canvas.height);
 
             // 1. Draw Map Base
             for(let r=0; r<world.length; r++) {
@@ -175,20 +194,18 @@
                 }
             }
 
-            // 2. Flashlight Effect (Darkness)
+            // 2. Flashlight Effect
             const off = document.createElement('canvas');
             off.width = canvas.width; off.height = canvas.height;
             const octx = off.getContext('2d');
-            octx.fillStyle = 'rgba(0,0,0,0.92)';
+            octx.fillStyle = 'rgba(0,0,0,0.94)';
             octx.fillRect(0,0,canvas.width,canvas.height);
             octx.globalCompositeOperation = 'destination-out';
             
             const grad = octx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 250);
-            grad.addColorStop(0, 'rgba(255,255,255,1)');
-            grad.addColorStop(1, 'rgba(255,255,255,0)');
+            grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
             octx.fillStyle = grad;
-            octx.beginPath();
-            octx.moveTo(player.x, player.y);
+            octx.beginPath(); octx.moveTo(player.x, player.y);
             octx.arc(player.x, player.y, 300, player.angle - 0.6, player.angle + 0.6);
             octx.fill();
 
@@ -202,7 +219,6 @@
             ctx.fillStyle = '#ff0'; bullets.forEach(b => ctx.fillRect(b.x, b.y, 4, 4));
             ctx.fillStyle = '#f00'; enemyBullets.forEach(b => ctx.fillRect(b.x, b.y, 4, 4));
 
-            // Apply Darkness Layer
             ctx.drawImage(off, 0, 0);
         }
 
