@@ -3,26 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CQB Tactical - Bangi Edition v2.2 (Dynamic Lighting)</title>
+    <title>CQB Tactical - Bangi Edition v2.2 Full</title>
     <style>
+        /* CSS UNTUK TAMPILAN */
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; color: #0f0; user-select: none; }
         canvas { display: block; }
         
+        /* PESAN ROTASI */
         #landscape-msg { position: fixed; top:0; left:0; width:100%; height:100%; background:#000; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
+        
+        /* OVERLAY MENU & SCREEN (Menu Lama Ada Di Sini) */
         .overlay { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; background: rgba(0,0,0,0.95); }
-        .menu-btn { width: 250px; padding: 15px; margin: 8px; border: 2px solid #0f0; background: rgba(0,20,0,0.5); color: #0f0; font-weight: bold; cursor: pointer; text-align: center; }
-        .menu-btn:hover { background: #0f0; color: #000; }
+        .menu-btn { width: 250px; padding: 15px; margin: 8px; border: 2px solid #0f0; background: rgba(0,20,0,0.5); color: #0f0; font-weight: bold; cursor: pointer; text-align: center; border-radius: 4px; }
+        .menu-btn:hover { background: #0f0; color: #000; box-shadow: 0 0 15px #0f0; }
+        
+        /* HUD GAME */
         #game-hud { position: absolute; top: 20px; left: 20px; display: none; pointer-events: none; z-index: 500; font-size: 14px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 5px; border: 1px solid #0f0; box-shadow: 0 0 10px #0f0; }
 
-        /* CONTROLS HP */
+        /* KONTROL MOBILE (D-PAD) */
         #mobile-ui { position: absolute; bottom: 20px; width: 100%; height: 200px; display: none; pointer-events: none; z-index: 1000; }
         .dpad { position: absolute; left: 30px; bottom: 20px; width: 150px; height: 150px; pointer-events: auto; }
-        .d-btn { position: absolute; width: 48px; height: 48px; background: rgba(255,255,255,0.1); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; color: white; border-radius: 8px; }
+        .d-btn { position: absolute; width: 48px; height: 48px; background: rgba(255,255,255,0.1); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; color: white; border-radius: 8px; font-weight: bold; }
         #up { left: 51px; top: 0; } #down { left: 51px; bottom: 0; } #left { left: 0; top: 51px; } #right { right: 0; top: 51px; }
         
         .action-area { position: absolute; right: 30px; bottom: 20px; pointer-events: auto; display: flex; flex-direction: row; gap: 15px; align-items: flex-end; }
-        .btn-circle { width: 65px; height: 65px; border-radius: 50%; border: 3px solid #fff; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; }
-        #fire-btn { background: rgba(255,0,0,0.5); width: 85px; height: 85px; }
+        .btn-circle { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #fff; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; text-shadow: 1px 1px 2px #000; }
+        #fire-btn { background: rgba(255,0,0,0.5); width: 90px; height: 90px; font-size: 16px; }
         #grenade-btn { background: rgba(255,165,0,0.5); }
         #door-btn { background: rgba(0,255,0,0.5); display: none; }
 
@@ -35,20 +41,23 @@
     <div id="landscape-msg"><h1>🔄 ROTATE TO LANDSCAPE</h1></div>
 
     <div id="main-menu" class="overlay">
-        <h1>CQB: BANGI OPS<br>v2.2 Dynamic Lighting</h1>
+        <h1 style="letter-spacing: 5px; text-shadow: 0 0 10px #0f0;">CQB: BANGI OPS</h1>
+        <p style="margin-bottom: 30px; color: #888;">Tactical Humanoid v2.2</p>
         <div class="menu-btn" onclick="initGame()">START MISSION</div>
+        <div class="menu-btn" onclick="window.location.reload()">RELOAD SYSTEM</div>
         <div class="menu-btn" onclick="window.location.href='about:blank'" style="color:red; border-color:red;">QUIT</div>
     </div>
 
     <div id="win-screen" class="overlay" style="display:none;">
-        <h1 style="color: #ff0;">YOU WIN MY FELLAS SOLDIER!</h1>
-        <p style="color: white; margin-bottom: 20px;">Area Bangi sudah aman.</p>
-        <div class="menu-btn" onclick="location.reload()">BACK TO MENU</div>
+        <h1 style="color: #ff0;">MISSION ACCOMPLISHED</h1>
+        <p style="color: white; margin-bottom: 20px;">Semua target berhasil dilumpuhkan.</p>
+        <div class="menu-btn" onclick="location.reload()">BACK TO BASE</div>
     </div>
 
     <div id="death-screen" class="overlay" style="display:none;">
-        <h2 style="color: #f00;">THANKS PALL FOR THE TEAM :')</h2>
-        <div class="menu-btn" onclick="location.reload()">BACK TO MENU</div>
+        <h2 style="color: #f00;">SOLDIER DOWN!</h2>
+        <p style="color: white; margin-bottom: 20px;">Kamu gugur dalam tugas.</p>
+        <div class="menu-btn" onclick="location.reload()">TRY AGAIN</div>
     </div>
 
     <div id="game-hud">
@@ -78,6 +87,7 @@
         let playing = false, isWin = false, isDead = false;
         const TILE = 64;
 
+        // Peta Level
         const world = [
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
             [1,0,0,0,1,0,0,0,0,0,3,0,0,0,1],
@@ -94,6 +104,7 @@
             {x: 750, y: 300, hp: 100, patDir: 1, base: 300}, 
             {x: 850, y: 150, hp: 100, patDir: -1, base: 150}
         ];
+        
         let bullets = [], enemyBullets = [], grenades = [];
         let moveState = { up:false, down:false, left:false, right:false };
         const keys = {};
@@ -101,12 +112,17 @@
         function initGame() {
             document.getElementById('main-menu').style.display = 'none';
             document.getElementById('game-hud').style.display = 'block';
-            playing = true; resize();
+            playing = true; 
+            resize();
         }
 
-        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        function resize() { 
+            canvas.width = window.innerWidth; 
+            canvas.height = window.innerHeight; 
+        }
         window.addEventListener('resize', resize);
 
+        // Input Keyboard & Mouse
         window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
         window.addEventListener('mousemove', e => { 
@@ -114,6 +130,7 @@
         });
         window.addEventListener('mousedown', e => { if(playing && !isDead && !('ontouchstart' in window)) shoot(); });
 
+        // Input Touch D-Pad
         function setupBtn(id, dir) {
             const el = document.getElementById(id);
             el.addEventListener('touchstart', (e) => { e.preventDefault(); moveState[dir] = true; });
@@ -140,7 +157,6 @@
                 if(world[ty] && world[ty][tx] === 2) world[ty][tx] = 0;
                 if(world[ty] && world[ty][tx] === 4) {
                     if(player.hasKey) world[ty][tx] = 0;
-                    else alert("Pintu BIRU terkunci! Cari benda KUNING (Keycard).");
                 }
             });
         }
@@ -154,6 +170,7 @@
             if(!playing || isWin || isDead) return;
             let dx=0, dy=0;
             
+            // Pergerakan
             if(keys['w'] || moveState.up) { dy -= player.speed; if('ontouchstart' in window) player.angle = -Math.PI/2; }
             if(keys['s'] || moveState.down) { dy += player.speed; if('ontouchstart' in window) player.angle = Math.PI/2; }
             if(keys['a'] || moveState.left) { dx -= player.speed; if('ontouchstart' in window) player.angle = Math.PI; }
@@ -162,9 +179,11 @@
             if(!hitWall(player.x+dx, player.y)) player.x += dx;
             if(!hitWall(player.x, player.y+dy)) player.y += dy;
 
+            // Ambil Keycard
             const gx = Math.floor(player.x/TILE), gy = Math.floor(player.y/TILE);
             if(world[gy] && world[gy][gx] === 3) { player.hasKey = true; world[gy][gx] = 0; }
 
+            // Cek Pintu
             let doorNearby = false;
             [[-1,0],[1,0],[0,-1],[0,1]].forEach(d => { 
                 let val = world[gy+d[1]] ? world[gy+d[1]][gx+d[0]] : 0;
@@ -172,6 +191,7 @@
             });
             document.getElementById('door-btn').style.display = doorNearby ? 'flex' : 'none';
 
+            // AI Musuh
             enemies.forEach(en => {
                 if(en.hp <= 0) return;
                 en.y += en.patDir * 1.5;
@@ -181,6 +201,7 @@
                 }
             });
 
+            // Logika Granat
             grenades.forEach((g, i) => {
                 if(!g.exploded) {
                     g.x += Math.cos(g.angle)*g.s; g.y += Math.sin(g.angle)*g.s;
@@ -196,29 +217,22 @@
                 }
             });
 
-            for (let i = bullets.length - 1; i >= 0; i--) {
-                let b = bullets[i];
+            // Update Peluru
+            bullets.forEach((b, i) => {
                 b.x += Math.cos(b.angle)*b.s; b.y += Math.sin(b.angle)*b.s;
-                let hit = false;
-                if(hitWall(b.x, b.y)) hit = true;
-                
+                if(hitWall(b.x, b.y)) bullets.splice(i,1);
                 enemies.forEach(en => { 
-                    if(!hit && en.hp > 0 && Math.hypot(en.x-b.x, en.y-b.y) < 25) { 
-                        en.hp -= 50; hit = true; 
-                    } 
+                    if(en.hp > 0 && Math.hypot(en.x-b.x, en.y-b.y) < 25) { en.hp -= 50; bullets.splice(i,1); } 
                 });
-                if(hit) bullets.splice(i,1);
-            }
+            });
 
-            for (let i = enemyBullets.length - 1; i >= 0; i--) {
-                let eb = enemyBullets[i];
+            enemyBullets.forEach((eb, i) => {
                 eb.x += Math.cos(eb.angle)*eb.s; eb.y += Math.sin(eb.angle)*eb.s;
-                let hit = false;
-                if(hitWall(eb.x, eb.y)) hit = true;
-                if(!hit && Math.hypot(player.x-eb.x, player.y-eb.y) < 18) { player.hp -= 10; hit = true; }
-                if(hit) enemyBullets.splice(i,1);
-            }
+                if(hitWall(eb.x, eb.y)) enemyBullets.splice(i,1);
+                if(Math.hypot(player.x-eb.x, player.y-eb.y) < 18) { player.hp -= 10; enemyBullets.splice(i,1); }
+            });
 
+            // Update HUD & Status
             let aliveEnemies = enemies.filter(e => e.hp > 0).length;
             document.getElementById('hp-val').innerText = player.hp;
             document.getElementById('en-val').innerText = aliveEnemies;
@@ -226,56 +240,37 @@
             document.getElementById('key-val').innerText = player.hasKey ? "FOUND" : "MISSING";
             document.getElementById('key-val').style.color = player.hasKey ? "#ff0" : "#f00";
 
-            if(aliveEnemies === 0 && !isWin) { 
-                isWin = true; 
-                setTimeout(() => { document.getElementById('win-screen').style.display = 'flex'; }, 800); 
-            }
-            if(player.hp <= 0 && !isDead) { 
-                isDead = true; 
-                setTimeout(() => { document.getElementById('death-screen').style.display = 'flex'; }, 500);
-            }
+            if(aliveEnemies === 0 && !isWin) { isWin = true; setTimeout(() => { document.getElementById('win-screen').style.display = 'flex'; }, 800); }
+            if(player.hp <= 0 && !isDead) { isDead = true; setTimeout(() => { document.getElementById('death-screen').style.display = 'flex'; }, 500); }
         }
 
+        // --- RENDER HUMANOID ---
         function drawHumanoid(x, y, angle, bodyCol, isEnemy) {
             ctx.save();
             ctx.translate(x, y);
             ctx.rotate(angle);
-
-            // Lengan Kiri
+            // Tangan
             ctx.fillStyle = bodyCol;
             ctx.beginPath(); ctx.ellipse(-12, -8, 8, 16, Math.PI / 4, 0, Math.PI * 2); ctx.fill();
-            ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
-
-            // Lengan Kanan 
-            ctx.fillStyle = bodyCol;
-            ctx.beginPath(); ctx.ellipse(12, 10, 8, 14, -Math.PI / 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-
+            ctx.beginPath(); ctx.ellipse(12, 10, 8, 14, -Math.PI / 4, 0, Math.PI * 2); ctx.fill();
             // Badan
-            ctx.fillStyle = isEnemy ? '#a00' : '#000';
-            ctx.beginPath(); ctx.ellipse(0, 0, 15, 22, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-            ctx.fillStyle = isEnemy ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.1)';
-            ctx.fillRect(-8, -12, 16, 24);
-
+            ctx.fillStyle = isEnemy ? '#a00' : '#111';
+            ctx.beginPath(); ctx.ellipse(0, 0, 15, 22, 0, 0, Math.PI * 2); ctx.fill();
             // Kepala
-            ctx.fillStyle = isEnemy ? '#600' : '#111';
-            ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-            // Visor
+            ctx.fillStyle = isEnemy ? '#600' : '#222';
+            ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill();
+            // Visor Mata
             ctx.fillStyle = isEnemy ? '#ff0' : '#0ff'; ctx.fillRect(-6, -6, 12, 3);
-
             // Senjata
-            ctx.fillStyle = '#111';
-            ctx.fillRect(10, -5, 25, 6); 
-            ctx.fillRect(32, -4, 10, 4); 
-            if (!isEnemy) { ctx.fillStyle = '#ff0'; ctx.fillRect(12, -4, 6, 2); }
-
+            ctx.fillStyle = '#000'; ctx.fillRect(10, -5, 25, 6); ctx.fillRect(32, -4, 10, 4); 
             ctx.restore();
         }
 
-        // --- SISTEM CAHAYA BARU ---
+        // --- RENDER UTAMA ---
         function draw() {
             if(!playing) return;
             
-            // Background & Tembok
+            // Dasar Dunia
             ctx.fillStyle = '#050505'; ctx.fillRect(0,0,canvas.width,canvas.height);
             for(let r=0; r<world.length; r++) {
                 for(let c=0; c<world[r].length; c++) {
@@ -288,7 +283,7 @@
                 }
             }
 
-            // Gambar Karakter Terlebih Dahulu (Agar terpengaruh gelap)
+            // Entity
             enemies.forEach(en => { if(en.hp > 0) drawHumanoid(en.x, en.y, Math.atan2(player.y-en.y, player.x-en.x), '#c62828', true); });
             drawHumanoid(player.x, player.y, player.angle, '#1976d2', false);
 
@@ -296,27 +291,25 @@
             ctx.fillStyle = '#ff0'; bullets.forEach(b => ctx.fillRect(b.x-2, b.y-2, 5, 5));
             ctx.fillStyle = '#f00'; enemyBullets.forEach(b => ctx.fillRect(b.x-2, b.y-2, 5, 5));
 
-            // LAPISAN KEGELAPAN (FOG OF WAR)
+            // SISTEM CAHAYA (FOG OF WAR)
             const off = document.createElement('canvas'); off.width = canvas.width; off.height = canvas.height;
             const octx = off.getContext('2d'); 
-            octx.fillStyle = 'rgba(0,0,0,0.98)'; // Kegelapan pekat
+            octx.fillStyle = 'rgba(0,0,0,0.98)';
             octx.fillRect(0,0,canvas.width,canvas.height);
             octx.globalCompositeOperation = 'destination-out';
             
-            // 1. Senter Utama Karakter
+            // 1. Senter Utama
             const grad = octx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 350);
-            grad.addColorStop(0, 'rgba(255,255,255,1)'); 
-            grad.addColorStop(1, 'rgba(255,255,255,0)');
+            grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
             octx.fillStyle = grad; octx.beginPath(); octx.moveTo(player.x, player.y);
             octx.arc(player.x, player.y, 400, player.angle - 0.7, player.angle + 0.7); octx.fill();
 
-            // 2. Cahaya Ambient (Bulat Kecil Keliling Player)
-            const ambientGrad = octx.createRadialGradient(player.x, player.y, 0, player.x, player.y, 70);
-            ambientGrad.addColorStop(0, 'rgba(255,255,255,1)');
-            ambientGrad.addColorStop(1, 'rgba(255,255,255,0)');
-            octx.fillStyle = ambientGrad; octx.beginPath(); octx.arc(player.x, player.y, 70, 0, Math.PI*2); octx.fill();
+            // 2. Ambient Light (Sekeliling Player)
+            const ambient = octx.createRadialGradient(player.x, player.y, 0, player.x, player.y, 75);
+            ambient.addColorStop(0, 'rgba(255,255,255,1)'); ambient.addColorStop(1, 'rgba(255,255,255,0)');
+            octx.fillStyle = ambient; octx.beginPath(); octx.arc(player.x, player.y, 75, 0, Math.PI*2); octx.fill();
 
-            // 3. Cahaya Ledakan Granat
+            // 3. Ledakan Granat
             grenades.forEach(g => {
                 const gGrad = octx.createRadialGradient(g.x, g.y, 0, g.x, g.y, g.exploded ? 350 : 80);
                 gGrad.addColorStop(0, g.exploded ? 'rgba(255,255,255,1)' : 'rgba(255,165,0,0.8)');
@@ -324,19 +317,14 @@
                 octx.fillStyle = gGrad; octx.beginPath(); octx.arc(g.x, g.y, g.exploded ? 350 : 80, 0, Math.PI*2); octx.fill();
             });
 
-            // Terapkan Kegelapan ke Canvas Utama
-            ctx.globalCompositeOperation = 'source-over';
             ctx.drawImage(off, 0, 0);
 
-            // 4. EFEK "BERSINAR" VOLUMETRIC PADA SENTER PANDANGAN
-            ctx.globalCompositeOperation = 'lighter'; // Menambah nilai terang
-            const glowGrad = ctx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 350);
-            glowGrad.addColorStop(0, 'rgba(150, 220, 255, 0.25)'); // Sinar kebiruan tipis
-            glowGrad.addColorStop(1, 'rgba(150, 220, 255, 0)');
-            ctx.fillStyle = glowGrad; ctx.beginPath(); ctx.moveTo(player.x, player.y);
+            // 4. EFEK "GLOW" RUANGAN (Volumetric)
+            ctx.globalCompositeOperation = 'lighter';
+            const glow = ctx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 350);
+            glow.addColorStop(0, 'rgba(100, 200, 255, 0.2)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = glow; ctx.beginPath(); ctx.moveTo(player.x, player.y);
             ctx.arc(player.x, player.y, 400, player.angle - 0.7, player.angle + 0.7); ctx.fill();
-            
-            // Kembalikan Mode Draw Normal
             ctx.globalCompositeOperation = 'source-over'; 
         }
 
