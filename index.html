@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CQB Tactical - Bangi Edition v2.2.5 AI Fixed</title>
+    <title>CQB Tactical - Bangi Edition v2.2.7 Voice Update</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; color: #0f0; user-select: none; }
         canvas { display: block; }
@@ -31,10 +31,10 @@
 
     <div id="main-menu" class="overlay">
         <h1 style="letter-spacing: 5px; text-shadow: 0 0 10px #0f0;">CQB: BANGI OPS</h1>
-        <p style="margin-bottom: 30px; color: #888;">Tactical Humanoid v2.2.5</p>
+        <p style="margin-bottom: 30px; color: #888;">Tactical Humanoid v2.2.7</p>
         <div class="menu-btn" onclick="initGame()">SOLO MISSION</div>
         <div class="menu-btn" onclick="alert('Multiplayer Mode: Under Maintenance')">MULTIPLAYER</div>
-        <div class="menu-btn" onclick="alert('CQB Tactical v2.2.5\nAI & Collision Fixed.\nCreated by Nasa.')">ABOUT</div>
+        <div class="menu-btn" onclick="alert('CQB Tactical v2.2.7\nVoice System Added.\nCreated by Nasa.')">ABOUT</div>
         <div class="menu-btn" onclick="window.location.href='about:blank'" style="color:red; border-color:red; margin-top: 15px;">QUIT</div>
     </div>
 
@@ -74,6 +74,25 @@
         const ctx = canvas.getContext('2d');
         let playing = false, isWin = false, isDead = false;
         const TILE = 64;
+
+        // --- SFX & VOICE SYSTEM ---
+        const sfxShot = new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c976f62663.mp3'); 
+        sfxShot.volume = 0.4;
+
+        function playShot() {
+            const shot = sfxShot.cloneNode();
+            shot.volume = 0.4;
+            shot.play();
+        }
+
+        function aiSpeak(text) {
+            const msg = new SpeechSynthesisUtterance();
+            msg.text = text;
+            msg.lang = 'en-US';
+            msg.rate = 0.9; // Sedikit lebih lambat supaya dramatis
+            msg.pitch = 1;
+            window.speechSynthesis.speak(msg);
+        }
 
         const world = [
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -122,7 +141,11 @@
         document.getElementById('grenade-btn').addEventListener('touchstart', e => { e.preventDefault(); if(playing && !isDead) throwGrenade(); });
         document.getElementById('door-btn').addEventListener('touchstart', e => { e.preventDefault(); interact(); });
 
-        function shoot() { bullets.push({x:player.x, y:player.y, angle:player.angle, s:15}); }
+        function shoot() { 
+            bullets.push({x:player.x, y:player.y, angle:player.angle, s:15}); 
+            playShot(); 
+        }
+        
         function throwGrenade() {
             if(player.grenades > 0) {
                 grenades.push({x:player.x, y:player.y, angle:player.angle, s:6, timer: 60, exploded: false});
@@ -132,6 +155,7 @@
 
         function interact() {
             const gx = Math.floor(player.x/TILE), gy = Math.floor(player.y/TILE);
+            if (!world[gy]) return;
             [[-1,0],[1,0],[0,-1],[0,1]].forEach(d => {
                 let tx = gx+d[0], ty = gy+d[1];
                 if(world[ty] && world[ty][tx] === 2) world[ty][tx] = 0;
@@ -141,7 +165,6 @@
 
         function hitWall(nx, ny) {
             const gx = Math.floor(nx/TILE), gy = Math.floor(ny/TILE);
-            // Tambahkan proteksi undefined agar tidak error
             if (!world[gy]) return true;
             return world[gy][gx] === 1 || world[gy][gx] === 2 || world[gy][gx] === 4;
         }
@@ -169,28 +192,22 @@
             }
             document.getElementById('door-btn').style.display = doorNearby ? 'flex' : 'none';
 
-            // RE-ENGINEERED AI LOGIC
             enemies.forEach(en => {
                 if(en.hp <= 0) return;
-                
-                let moveStep = en.patDir * 1.5;
-                let nextY = en.y + moveStep;
-                
-                // Cek tabrakan dengan offset 20px agar tidak macet
+                let nextY = en.y + en.patDir * 1.5;
                 if(!hitWall(en.x, nextY + (en.patDir * 20))) {
                     en.y = nextY;
                     if(Math.abs(en.y - en.base) > 100) en.patDir *= -1;
                 } else {
-                    en.patDir *= -1; // Balik arah jika ada halangan
+                    en.patDir *= -1;
                 }
 
-                // AI Menembak
                 if(Math.hypot(player.x-en.x, player.y-en.y) < 300 && Math.random() < 0.03) {
                     enemyBullets.push({x:en.x, y:en.y, angle: Math.atan2(player.y-en.y, player.x-en.x), s:7});
+                    playShot(); 
                 }
             });
 
-            // GRENADES & BULLETS (SAME)
             grenades.forEach((g, i) => {
                 if(!g.exploded) {
                     g.x += Math.cos(g.angle)*g.s; g.y += Math.sin(g.angle)*g.s;
@@ -222,10 +239,18 @@
             document.getElementById('en-val').innerText = aliveEnemies;
             document.getElementById('gren-val').innerText = player.grenades;
             document.getElementById('key-val').innerText = player.hasKey ? "FOUND" : "MISSING";
-            document.getElementById('key-val').style.color = player.hasKey ? "#ff0" : "#f00";
 
-            if(aliveEnemies === 0 && !isWin) { isWin = true; setTimeout(() => { document.getElementById('win-screen').style.display = 'flex'; }, 800); }
-            if(player.hp <= 0 && !isDead) { isDead = true; setTimeout(() => { document.getElementById('death-screen').style.display = 'flex'; }, 500); }
+            // CONDITION CHECK FOR VOICE
+            if(aliveEnemies === 0 && !isWin) { 
+                isWin = true; 
+                aiSpeak("YOU WIN MY FELLAS SOLDIER!"); 
+                setTimeout(() => { document.getElementById('win-screen').style.display = 'flex'; }, 800); 
+            }
+            if(player.hp <= 0 && !isDead) { 
+                isDead = true; 
+                aiSpeak("THANKS PALL FOR THE TEAM"); 
+                setTimeout(() => { document.getElementById('death-screen').style.display = 'flex'; }, 500); 
+            }
         }
 
         function drawHumanoid(x, y, angle, bodyCol, isEnemy) {
