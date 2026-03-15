@@ -1,3 +1,19 @@
+name: Build Website
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ... (langkah-langkah build kamu yang lain ada di sini) ...
+
       - name: Notifikasi Telegram - BERHASIL 🚀
         if: success()
         uses: appleboy/telegram-action@master
@@ -7,10 +23,7 @@
           format: markdown
           message: |
             ✅ **Build Berhasil, Nasa!**
-            
-            Website **Bakso Bangi** sudah aman dan diperbarui.
-            📌 **Repo:** ${{ github.repository }}
-            🔗 [Cek Website](https://github.com/${{ github.repository }})
+            Website **Bakso Bangi** sudah aman.
 
       - name: Notifikasi Telegram - GAGAL ❌
         if: failure()
@@ -21,10 +34,4 @@
           format: markdown
           message: |
             ⚠️ **Waduh Nasa, Build GAGAL!**
-            
-            Ada masalah saat proses pembuatan website **Bakso Bangi**.
-            ❌ **Status:** Failed
-            🛠 **Cek Error di Sini:** https://github.com/${{ github.repository }}/actions
-            
-            Segera diperbaiki ya agar pelanggan bisa akses webnya!
-            
+            Cek errornya di sini: https://github.com/${{ github.repository }}/actions
