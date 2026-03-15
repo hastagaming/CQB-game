@@ -17,22 +17,25 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # --- TAMBAHKAN DUA BARIS DI BAWAH INI ---
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # --- BAGIAN DEPLOY KE GITHUB PAGES ---
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v4
 
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.' # Pastikan index.html ada di folder utama
+          path: '.' 
 
       - name: Deploy to GitHub Pages
-        id: deployment
+        id: deployment # ID ini penting untuk mengisi URL di atas
         uses: actions/deploy-pages@v4
 
       # --- BAGIAN NOTIFIKASI TELEGRAM ---
