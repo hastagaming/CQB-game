@@ -1,18 +1,33 @@
-name: Build Website
+name: CI/CD Bakso Bangi
 
 on:
   push:
+    branches:
+      - main
+  pull_request:
     branches:
       - main
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # ... (langkah-langkah build kamu yang lain ada di sini) ...
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Project
+        run: npm run build
+
+      # --- BAGIAN NOTIFIKASI TELEGRAM ---
 
       - name: Notifikasi Telegram - BERHASIL 🚀
         if: success()
@@ -23,7 +38,11 @@ jobs:
           format: markdown
           message: |
             ✅ **Build Berhasil, Nasa!**
-            Website **Bakso Bangi** sudah aman.
+            
+            Website **Bakso Bangi** di repo `${{ github.repository }}` sudah berhasil diperbarui tanpa kendala.
+            
+            🔗 [Lihat Website](https://hastagaming.github.io/CQB-game/)
+            👤 **Pushed by:** ${{ github.actor }}
 
       - name: Notifikasi Telegram - GAGAL ❌
         if: failure()
@@ -34,4 +53,9 @@ jobs:
           format: markdown
           message: |
             ⚠️ **Waduh Nasa, Build GAGAL!**
-            Cek errornya di sini: https://github.com/${{ github.repository }}/actions
+            
+            Ada masalah saat proses deploy website **Bakso Bangi**.
+            ❌ **Status:** Failed
+            🛠 **Cek Error di Sini:** https://github.com/${{ github.repository }}/actions
+            
+            Segera diperiksa ya, semangat!
