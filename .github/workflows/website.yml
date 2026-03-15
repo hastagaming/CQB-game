@@ -8,6 +8,12 @@ on:
     branches:
       - main
 
+# Wajib ditambahkan agar GitHub Actions diizinkan mengunggah file ke GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -16,19 +22,20 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      # --- BAGIAN DEPLOY KE GITHUB PAGES ---
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          node-version: '20'
+          path: '.' # Pastikan index.html ada di folder utama
 
-      - name: Install Dependencies
-        run: npm install
-
-      - name: Build Project
-        run: npm run build
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
       # --- BAGIAN NOTIFIKASI TELEGRAM ---
-
       - name: Notifikasi Telegram - BERHASIL 🚀
         if: success()
         uses: appleboy/telegram-action@master
