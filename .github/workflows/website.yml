@@ -1,0 +1,30 @@
+      - name: Notifikasi Telegram - BERHASIL 🚀
+        if: success()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          format: markdown
+          message: |
+            ✅ **Build Berhasil, Nasa!**
+            
+            Website **Bakso Bangi** sudah aman dan diperbarui.
+            📌 **Repo:** ${{ github.repository }}
+            🔗 [Cek Website](https://github.com/${{ github.repository }})
+
+      - name: Notifikasi Telegram - GAGAL ❌
+        if: failure()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          format: markdown
+          message: |
+            ⚠️ **Waduh Nasa, Build GAGAL!**
+            
+            Ada masalah saat proses pembuatan website **Bakso Bangi**.
+            ❌ **Status:** Failed
+            🛠 **Cek Error di Sini:** https://github.com/${{ github.repository }}/actions
+            
+            Segera diperbaiki ya agar pelanggan bisa akses webnya!
+            
