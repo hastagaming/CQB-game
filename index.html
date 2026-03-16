@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CQB Tactical - Bangi Edition v2.3.0 High-Quality Audio</title>
+    <title>CQB Tactical - Bangi Edition v2.3.1 Shotgun Update</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; color: #0f0; user-select: none; }
         canvas { display: block; }
@@ -31,20 +31,22 @@
 
     <div id="main-menu" class="overlay">
         <h1 style="letter-spacing: 5px; text-shadow: 0 0 10px #0f0;">CQB: BANGI OPS</h1>
-        <p style="margin-bottom: 30px; color: #888;">Tactical Humanoid v2.3.0</p>
+        <p style="margin-bottom: 30px; color: #888;">Tactical Humanoid v2.3.1</p>
         <div class="menu-btn" onclick="initGame()">SOLO MISSION</div>
         <div class="menu-btn" onclick="alert('Multiplayer Mode: Under Maintenance')">MULTIPLAYER</div>
-        <div class="menu-btn" onclick="alert('CQB Tactical v2.3.0\nHigh-Quality Voice Lines Added.\nCreated by Nasa.')">ABOUT</div>
+        <div class="menu-btn" onclick="alert('CQB Tactical v2.3.1\nNative Shotgun & Fanfare Update.\nCreated by Nasa.')">ABOUT</div>
         <div class="menu-btn" onclick="window.location.href='about:blank'" style="color:red; border-color:red; margin-top: 15px;">QUIT</div>
     </div>
 
     <div id="win-screen" class="overlay" style="display:none;">
-        <h1 style="color: #ff0;">MISSION ACCOMPLISHED. SECTOR CLEAR.</h1>
+        <h1 style="color: #ff0;">MISSION ACCOMPLISHED</h1>
+        <p>ALL TANGOS NEUTRALIZED</p>
         <div class="menu-btn" onclick="location.reload()">BACK TO BASE</div>
     </div>
 
     <div id="death-screen" class="overlay" style="display:none;">
-        <h2 style="color: #f00;">MISSION FAILED. REGROUP AT RALLY POINT.</h2>
+        <h2 style="color: #f00;">MISSION FAILED</h2>
+        <p>KIA - KILLED IN ACTION</p>
         <div class="menu-btn" onclick="location.reload()">RETRY MISSION</div>
     </div>
 
@@ -75,37 +77,79 @@
         let playing = false, isWin = false, isDead = false;
         const TILE = 64;
 
-        // --- AUDIO SYSTEM v2.3.0 ---
+        // --- CORE NATIVE AUDIO SYSTEM ---
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx;
-
-        // MP3 dari situs eksternal (Suara Radio Militer)
-        const winAudio = new Audio('https://cdn.pixabay.com/audio/2021/08/04/audio_1088716388.mp3'); 
-        const lossAudio = new Audio('https://cdn.pixabay.com/audio/2024/02/14/audio_9242a353d2.mp3');
-        
-        // Memastikan audio siap diputar
-        winAudio.load();
-        lossAudio.load();
 
         function initAudio() {
             if (!audioCtx) audioCtx = new AudioContext();
             if (audioCtx.state === 'suspended') audioCtx.resume();
         }
 
-        // Suara tembakan (Sintesis Audio API tetap dipakai karena sangat responsif)
-        function playShot() {
+        // --- SHOTGUN SOUND SYNTHESIS ---
+        function playShotgun() {
             if (!audioCtx) initAudio();
+            const now = audioCtx.currentTime;
+
+            // Ledakan (White Noise)
+            const bufferSize = audioCtx.sampleRate * 0.1;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const noiseFilter = audioCtx.createBiquadFilter();
+            noiseFilter.type = 'lowpass';
+            noiseFilter.frequency.setValueAtTime(1200, now);
+            
+            const noiseGain = audioCtx.createGain();
+            noiseGain.gain.setValueAtTime(0.5, now);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(audioCtx.destination);
+
+            // Dentuman Rendah (Thump)
             const osc = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            osc.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(140, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
-            gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
-            osc.start(audioCtx.currentTime);
-            osc.stop(audioCtx.currentTime + 0.08);
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(100, now);
+            osc.frequency.exponentialRampToValueAtTime(10, now + 0.15);
+            gain.gain.setValueAtTime(0.7, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            noise.start(now);
+            osc.start(now);
+            osc.stop(now + 0.15);
+        }
+
+        // --- WIN/LOSS FANFARE SYNTHESIS ---
+        function playFanfare(isVictory) {
+            if (!audioCtx) initAudio();
+            const now = audioCtx.currentTime;
+            
+            const notes = isVictory ? [440, 554, 659, 880] : [110, 92, 82, 73]; // Mayor vs Minor berat
+            const type = isVictory ? 'square' : 'sawtooth';
+
+            notes.forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, now + i * 0.15);
+                
+                gain.gain.setValueAtTime(0.1, now + i * 0.15);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.15 + 0.4);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now + i * 0.15);
+                osc.stop(now + i * 0.15 + 0.5);
+            });
         }
 
         const world = [
@@ -157,8 +201,8 @@
         document.getElementById('door-btn').addEventListener('touchstart', e => { e.preventDefault(); interact(); });
 
         function shoot() { 
-            bullets.push({x:player.x, y:player.y, angle:player.angle, s:15}); 
-            playShot(); 
+            bullets.push({x:player.x, y:player.y, angle:player.angle, s:18}); 
+            playShotgun(); 
         }
         
         function throwGrenade() {
@@ -219,7 +263,7 @@
 
                 if(Math.hypot(player.x-en.x, player.y-en.y) < 300 && Math.random() < 0.03) {
                     enemyBullets.push({x:en.x, y:en.y, angle: Math.atan2(player.y-en.y, player.x-en.x), s:7});
-                    playShot(); 
+                    playShotgun(); // Musuh juga pakai shotgun biar rame!
                 }
             });
 
@@ -239,14 +283,14 @@
                 b.x += Math.cos(b.angle)*b.s; b.y += Math.sin(b.angle)*b.s;
                 if(hitWall(b.x, b.y)) bullets.splice(i,1);
                 enemies.forEach(en => { 
-                    if(en.hp > 0 && Math.hypot(en.x-b.x, en.y-b.y) < 25) { en.hp -= 50; bullets.splice(i,1); } 
+                    if(en.hp > 0 && Math.hypot(en.x-b.x, en.y-b.y) < 25) { en.hp -= 100; bullets.splice(i,1); } 
                 });
             });
 
             enemyBullets.forEach((eb, i) => {
                 eb.x += Math.cos(eb.angle)*eb.s; eb.y += Math.sin(eb.angle)*eb.s;
                 if(hitWall(eb.x, eb.y)) enemyBullets.splice(i,1);
-                if(Math.hypot(player.x-eb.x, player.y-eb.y) < 18) { player.hp -= 10; enemyBullets.splice(i,1); }
+                if(Math.hypot(player.x-eb.x, player.y-eb.y) < 18) { player.hp -= 20; enemyBullets.splice(i,1); }
             });
 
             let aliveEnemies = enemies.filter(e => e.hp > 0).length;
@@ -255,16 +299,15 @@
             document.getElementById('gren-val').innerText = player.grenades;
             document.getElementById('key-val').innerText = player.hasKey ? "FOUND" : "MISSING";
 
-            // LOGIKA AUDIO MENANG/KALAH
             if(aliveEnemies === 0 && !isWin) { 
                 isWin = true; 
-                winAudio.play();
-                setTimeout(() => { document.getElementById('win-screen').style.display = 'flex'; }, 500); 
+                playFanfare(true);
+                setTimeout(() => { document.getElementById('win-screen').style.display = 'flex'; }, 400); 
             }
             if(player.hp <= 0 && !isDead) { 
                 isDead = true; 
-                lossAudio.play();
-                setTimeout(() => { document.getElementById('death-screen').style.display = 'flex'; }, 500); 
+                playFanfare(false);
+                setTimeout(() => { document.getElementById('death-screen').style.display = 'flex'; }, 400); 
             }
         }
 
@@ -326,8 +369,8 @@
             ctx.arc(player.x, player.y, 400, player.angle - 0.7, player.angle + 0.7); ctx.fill();
             ctx.globalCompositeOperation = 'source-over'; 
 
-            ctx.fillStyle = '#ff0'; bullets.forEach(b => ctx.fillRect(b.x-2, b.y-2, 5, 5));
-            ctx.fillStyle = '#f00'; enemyBullets.forEach(b => ctx.fillRect(b.x-2, b.y-2, 5, 5));
+            ctx.fillStyle = '#ff0'; bullets.forEach(b => ctx.fillRect(b.x-3, b.y-3, 7, 7)); // Peluru shotgun lebih besar
+            ctx.fillStyle = '#f00'; enemyBullets.forEach(b => ctx.fillRect(b.x-3, b.y-3, 7, 7));
         }
 
         function loop() { update(); draw(); requestAnimationFrame(loop); }
