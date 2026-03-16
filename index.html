@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CQB Tactical - Bangi Edition v2.2.7 Voice Update</title>
+    <title>CQB Tactical - Bangi Edition v2.2.9 Announcer Update</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; color: #0f0; user-select: none; }
         canvas { display: block; }
@@ -31,10 +31,10 @@
 
     <div id="main-menu" class="overlay">
         <h1 style="letter-spacing: 5px; text-shadow: 0 0 10px #0f0;">CQB: BANGI OPS</h1>
-        <p style="margin-bottom: 30px; color: #888;">Tactical Humanoid v2.2.7</p>
+        <p style="margin-bottom: 30px; color: #888;">Tactical Humanoid v2.2.9</p>
         <div class="menu-btn" onclick="initGame()">SOLO MISSION</div>
         <div class="menu-btn" onclick="alert('Multiplayer Mode: Under Maintenance')">MULTIPLAYER</div>
-        <div class="menu-btn" onclick="alert('CQB Tactical v2.2.7\nVoice System Added.\nCreated by Nasa.')">ABOUT</div>
+        <div class="menu-btn" onclick="alert('CQB Tactical v2.2.9\nCoD Announcer Voice Added.\nCreated by Nasa.')">ABOUT</div>
         <div class="menu-btn" onclick="window.location.href='about:blank'" style="color:red; border-color:red; margin-top: 15px;">QUIT</div>
     </div>
 
@@ -75,24 +75,76 @@
         let playing = false, isWin = false, isDead = false;
         const TILE = 64;
 
-        // --- SFX & VOICE SYSTEM ---
-        const sfxShot = new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c976f62663.mp3'); 
-        sfxShot.volume = 0.4;
+        // --- NATIVE AUDIO API SYSTEM ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
 
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        // Efek Suara Tembakan Suppressed
         function playShot() {
-            const shot = sfxShot.cloneNode();
-            shot.volume = 0.4;
-            shot.play();
+            if (!audioCtx) initAudio();
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.1);
         }
 
-        function aiSpeak(text) {
-            const msg = new SpeechSynthesisUtterance();
-            msg.text = text;
-            msg.lang = 'en-US';
-            msg.rate = 0.9; // Sedikit lebih lambat supaya dramatis
-            msg.pitch = 1;
-            window.speechSynthesis.speak(msg);
+        // Efek Bunyi Radio "Bip" Komandan
+        function playRadioBeep() {
+            if (!audioCtx) initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(2500, audioCtx.currentTime); 
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.15);
         }
+
+        // Suara Announcer ala Call of Duty
+        function aiSpeak(text) {
+            playRadioBeep(); // Bunyikan radio statis dulu
+            
+            setTimeout(() => {
+                const msg = new SpeechSynthesisUtterance();
+                msg.text = text;
+                msg.lang = 'en-US';
+                msg.rate = 0.8;  // Diperlambat sedikit agar terkesan tegas
+                msg.pitch = 0.2; // Suara dibuat sangat berat/deep
+
+                // Mencoba mencari suara pria jika tersedia di browser
+                const voices = window.speechSynthesis.getVoices();
+                const maleVoice = voices.find(v => v.name.toLowerCase().includes('male') || v.name.includes('David') || v.name.includes('UK English'));
+                if(maleVoice) msg.voice = maleVoice;
+
+                window.speechSynthesis.speak(msg);
+            }, 200); // AI ngomong 200ms setelah bunyi radio selesai
+        }
+
+        // Memuat daftar suara di awal (dibutuhkan oleh beberapa browser)
+        window.speechSynthesis.onvoiceschanged = function() {
+            window.speechSynthesis.getVoices();
+        };
 
         const world = [
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -116,6 +168,7 @@
         const keys = {};
 
         function initGame() {
+            initAudio(); 
             document.getElementById('main-menu').style.display = 'none';
             document.getElementById('game-hud').style.display = 'block';
             playing = true; resize();
@@ -240,7 +293,7 @@
             document.getElementById('gren-val').innerText = player.grenades;
             document.getElementById('key-val').innerText = player.hasKey ? "FOUND" : "MISSING";
 
-            // CONDITION CHECK FOR VOICE
+            // TRIGGER SUARA ANNOUNCER
             if(aliveEnemies === 0 && !isWin) { 
                 isWin = true; 
                 aiSpeak("YOU WIN MY FELLAS SOLDIER!"); 
